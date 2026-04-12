@@ -813,6 +813,7 @@
       var unit = contract === 'tricks' ? 'أكلات' : 'ديمن';
       var html = '<div class="contract-form">' + contractHeader(title) +
         '<div class="contract-instruction">كم ' + unit + ' أخذ كل لاعب؟ المجموع يجب أن يكون ١٣</div>';
+      var atMax = total >= 13;
       for (var i = 0; i < 4; i++) {
         var v = draft.counts[i];
         html += '<div class="stepper-row">' +
@@ -820,7 +821,7 @@
           '<div class="stepper-controls">' +
             '<button class="stepper-btn" onclick="countStep(' + i + ',-1)" ' + (v <= 0 ? 'disabled' : '') + '>−</button>' +
             '<div class="stepper-val">' + toAr(v) + '</div>' +
-            '<button class="stepper-btn" onclick="countStep(' + i + ',1)" ' + (v >= 13 ? 'disabled' : '') + '>+</button>' +
+            '<button class="stepper-btn" onclick="countStep(' + i + ',1)" ' + (atMax ? 'disabled' : '') + '>+</button>' +
           '</div>' +
         '</div>';
       }
@@ -957,6 +958,7 @@
         '<div class="contract-instruction">يد واحدة، والنقاط تُحسب للأربع كمم في نفس الوقت.</div>';
       // Tricks
       html += '<div style="font-weight:800;margin:10px 0 6px">أكلات (المجموع ١٣)</div>';
+      var tricksAtMax = tricksTotal >= 13;
       for (var i = 0; i < 4; i++) {
         var v = draft.tricks[i];
         html += '<div class="stepper-row">' +
@@ -964,13 +966,14 @@
           '<div class="stepper-controls">' +
             '<button class="stepper-btn" onclick="complexCountStep(\'tricks\',' + i + ',-1)" ' + (v <= 0 ? 'disabled' : '') + '>−</button>' +
             '<div class="stepper-val">' + toAr(v) + '</div>' +
-            '<button class="stepper-btn" onclick="complexCountStep(\'tricks\',' + i + ',1)" ' + (v >= 13 ? 'disabled' : '') + '>+</button>' +
+            '<button class="stepper-btn" onclick="complexCountStep(\'tricks\',' + i + ',1)" ' + (tricksAtMax ? 'disabled' : '') + '>+</button>' +
           '</div>' +
         '</div>';
       }
       html += '<div class="sum-hint ' + (tricksTotal === 13 ? 'ok' : 'bad') + '">المجموع: ' + toAr(tricksTotal) + ' / ١٣</div>';
       // Diamonds
       html += '<div style="font-weight:800;margin:10px 0 6px">ديمن (المجموع ١٣)</div>';
+      var diamondsAtMax = diamondsTotal >= 13;
       for (var j = 0; j < 4; j++) {
         var v2 = draft.diamonds[j];
         html += '<div class="stepper-row">' +
@@ -978,7 +981,7 @@
           '<div class="stepper-controls">' +
             '<button class="stepper-btn" onclick="complexCountStep(\'diamonds\',' + j + ',-1)" ' + (v2 <= 0 ? 'disabled' : '') + '>−</button>' +
             '<div class="stepper-val">' + toAr(v2) + '</div>' +
-            '<button class="stepper-btn" onclick="complexCountStep(\'diamonds\',' + j + ',1)" ' + (v2 >= 13 ? 'disabled' : '') + '>+</button>' +
+            '<button class="stepper-btn" onclick="complexCountStep(\'diamonds\',' + j + ',1)" ' + (diamondsAtMax ? 'disabled' : '') + '>+</button>' +
           '</div>' +
         '</div>';
       }
@@ -1020,11 +1023,15 @@
     function countStep(i, delta) {
       var newVal = draft.counts[i] + delta;
       if (newVal < 0 || newVal > 13) return;
+      var total = draft.counts.reduce(function(a, b) { return a + b; }, 0);
+      if (delta > 0 && total >= 13) return;
       draft.counts[i] = newVal; render();
     }
     function complexCountStep(key, i, delta) {
       var newVal = draft[key][i] + delta;
       if (newVal < 0 || newVal > 13) return;
+      var total = draft[key].reduce(function(a, b) { return a + b; }, 0);
+      if (delta > 0 && total >= 13) return;
       draft[key][i] = newVal; render();
     }
     function toggleDoubled(prefix, qi) {
