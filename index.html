@@ -177,36 +177,54 @@
     .sum-hint.ok { color: #2E7D32; }
     .sum-hint.bad { color: var(--burgundy); }
 
-    /* Card assignment (queens / king) */
+    /* Compact card slot (queens / king) */
     .card-slot {
-      background: rgba(26,39,68,0.04); border-radius: 12px; padding: 10px;
-      margin-bottom: 8px;
+      background: rgba(26,39,68,0.04); border-radius: 10px; padding: 6px 8px;
+      margin-bottom: 5px;
     }
     [data-theme="dark"] .card-slot { background: rgba(245,240,230,0.04); }
-    .card-slot-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
-    .card-symbol { font-size: 22px; font-weight: 900; }
+    .card-row { display: flex; align-items: center; gap: 6px; }
+    .card-symbol { font-size: 20px; font-weight: 900; width: 22px; text-align: center; flex-shrink: 0; }
     .card-symbol.red { color: #C62828; }
     .card-symbol.black { color: var(--navy); }
     [data-theme="dark"] .card-symbol.black { color: var(--cream); }
-    .card-label { font-size: 12px; font-weight: 700; }
+    .card-slot .pickers-inline { display: flex; gap: 3px; flex: 1; justify-content: flex-end; flex-wrap: wrap; }
     .double-toggle {
       background: rgba(201,162,39,0.15); border: 1.5px solid var(--gold);
-      color: var(--gold-text); border-radius: 999px; padding: 3px 10px;
-      font-family: 'Cairo', sans-serif; font-size: 11px; font-weight: 800; cursor: pointer;
+      color: var(--gold-text); border-radius: 999px; padding: 3px 9px;
+      font-family: 'Cairo', sans-serif; font-size: 10px; font-weight: 800; cursor: pointer;
+      flex-shrink: 0;
     }
     .double-toggle.active { background: var(--gold); color: var(--navy); }
-    .picker-row { display: flex; gap: 4px; margin-top: 6px; flex-wrap: wrap; }
-    .picker-label { font-size: 11px; font-weight: 700; color: var(--navy); opacity: 0.7; min-width: 56px; }
+    .picker-row { display: flex; gap: 3px; margin-top: 5px; flex-wrap: wrap; align-items: center; }
+    .picker-label { font-size: 10px; font-weight: 700; color: var(--navy); opacity: 0.7; min-width: 40px; }
     [data-theme="dark"] .picker-label { color: var(--cream); }
     .picker-chip {
       background: white; border: 1.5px solid rgba(26,39,68,0.15); border-radius: 999px;
-      padding: 5px 11px; font-family: 'Cairo', sans-serif; font-size: 12px; font-weight: 700;
-      color: var(--navy); cursor: pointer;
+      padding: 4px 9px; font-family: 'Cairo', sans-serif; font-size: 11px; font-weight: 700;
+      color: var(--navy); cursor: pointer; min-height: 28px;
     }
     .picker-chip.active { background: var(--burgundy); color: var(--cream); border-color: var(--burgundy); }
     .picker-chip.pos.active { background: #2E7D32; border-color: #2E7D32; color: white; }
     [data-theme="dark"] .picker-chip { background: rgba(245,240,230,0.06); color: var(--cream); border-color: rgba(245,240,230,0.12); }
-    .subline { font-size: 10px; opacity: 0.55; margin-top: 4px; }
+    .val-chip {
+      font-size: 10px; font-weight: 800; color: var(--gold-text);
+      background: rgba(201,162,39,0.15); padding: 2px 7px; border-radius: 999px; flex-shrink: 0;
+    }
+    .subline { font-size: 10px; opacity: 0.55; margin-top: 3px; }
+
+    /* Compact complex stepper grid */
+    .complex-counts {
+      display: grid; grid-template-columns: 1fr auto auto; gap: 4px 8px;
+      align-items: center; margin: 4px 0 6px;
+      background: rgba(26,39,68,0.04); border-radius: 10px; padding: 8px;
+    }
+    [data-theme="dark"] .complex-counts { background: rgba(245,240,230,0.04); }
+    .complex-counts-header { font-size: 10px; font-weight: 800; opacity: 0.6; text-align: center; }
+    .complex-counts-name { font-size: 12px; font-weight: 700; }
+    .mini-stepper { display: flex; align-items: center; gap: 3px; }
+    .mini-stepper .stepper-btn { width: 26px; height: 26px; font-size: 15px; }
+    .mini-stepper .stepper-val { min-width: 20px; font-size: 14px; }
 
     /* Trix order */
     .trix-order-list { display: flex; flex-direction: column; gap: 6px; }
@@ -810,9 +828,7 @@
     function renderCountForm(contract) {
       var total = draft.counts.reduce(function(a, b) { return a + b; }, 0);
       var title = contract === 'tricks' ? 'أكلات' : 'ديمن';
-      var unit = contract === 'tricks' ? 'أكلات' : 'ديمن';
-      var html = '<div class="contract-form">' + contractHeader(title) +
-        '<div class="contract-instruction">كم ' + unit + ' أخذ كل لاعب؟ المجموع يجب أن يكون ١٣</div>';
+      var html = '<div class="contract-form">' + contractHeader(title);
       var atMax = total >= 13;
       for (var i = 0; i < 4; i++) {
         var v = draft.counts[i];
@@ -836,8 +852,7 @@
     }
 
     function renderQueensForm() {
-      var html = '<div class="contract-form">' + contractHeader('بنات') +
-        '<div class="contract-instruction">عيّن من أخذ كل بنت. اضغط "مضاعَف" لتحديد بنت مضاعفة.</div>';
+      var html = '<div class="contract-form">' + contractHeader('بنات');
       draft.queens.forEach(function(q, qi) {
         html += renderDoubleableCard(q, qi, 'queens');
       });
@@ -850,8 +865,7 @@
     }
 
     function renderKingForm() {
-      var html = '<div class="contract-form">' + contractHeader('شايب الهاص') +
-        '<div class="contract-instruction">من أخذ شايب الهاص؟</div>';
+      var html = '<div class="contract-form">' + contractHeader('شايب الهاص');
       html += renderKingSlot(draft, 'kingHearts');
       html += renderPreviewRow(computeContractScores(draft));
       html += '<div class="btn-row">' +
@@ -863,24 +877,25 @@
 
     function renderDoubleableCard(q, qi, prefix) {
       var isComplexDiamondQueen = prefix === 'complex-queens' && q.suit === 'diamonds';
-      var extraLabel = '';
+      var slotStyle = isComplexDiamondQueen ? ' style="border:1.5px solid var(--gold);background:rgba(201,162,39,0.06)"' : '';
+      var valChip = '';
       if (isComplexDiamondQueen) {
-        var pts = q.doubled ? '-٦٠' : '-٣٥';
-        extraLabel = ' <span style="font-size:11px;font-weight:800;color:var(--gold-text);background:rgba(201,162,39,0.15);padding:2px 8px;border-radius:999px;margin-inline-start:6px">' + pts + ' مع الديمن</span>';
+        valChip = '<span class="val-chip">' + (q.doubled ? '-٦٠' : '-٣٥') + '</span>';
       }
-      var h = '<div class="card-slot"' + (isComplexDiamondQueen ? ' style="border:1.5px solid var(--gold);background:rgba(201,162,39,0.06)"' : '') + '>' +
-        '<div class="card-slot-header">' +
-          '<div><span class="card-symbol ' + (q.red ? 'red' : 'black') + '">' + q.symbol + '</span> <span class="card-label">بنت</span>' + extraLabel + '</div>' +
-          '<button class="double-toggle' + (q.doubled ? ' active' : '') + '" onclick="toggleDoubled(\'' + prefix + '\',' + qi + ')">مضاعَف</button>' +
-        '</div>';
-      h += '<div class="picker-row"><div class="picker-label">الآخذ:</div>';
+      var h = '<div class="card-slot"' + slotStyle + '>' +
+        '<div class="card-row">' +
+          '<span class="card-symbol ' + (q.red ? 'red' : 'black') + '">' + q.symbol + '</span>' +
+          valChip +
+          '<div class="pickers-inline">';
       for (var p = 0; p < 4; p++) {
         var active = q.taker === p ? ' active' : '';
         h += '<button class="picker-chip' + active + '" onclick="setTaker(\'' + prefix + '\',' + qi + ',' + p + ')">' + escHtml(state.players[p]) + '</button>';
       }
-      h += '</div>';
+      h += '</div>' +
+          '<button class="double-toggle' + (q.doubled ? ' active' : '') + '" onclick="toggleDoubled(\'' + prefix + '\',' + qi + ')">×٢</button>' +
+        '</div>';
       if (q.doubled) {
-        h += '<div class="picker-row"><div class="picker-label">-٢٥ إضافي:</div>';
+        h += '<div class="picker-row"><div class="picker-label">-٥٠:</div>';
         for (var p2 = 0; p2 < 4; p2++) {
           var a2 = q.dnPlayer === p2 ? ' active' : '';
           h += '<button class="picker-chip' + a2 + '" onclick="setDnPlayer(\'' + prefix + '\',' + qi + ',' + p2 + ')">' + escHtml(state.players[p2]) + '</button>';
@@ -892,7 +907,6 @@
           h += '<button class="picker-chip pos' + a3 + '" onclick="setUpPlayer(\'' + prefix + '\',' + qi + ',' + p3 + ')">' + escHtml(state.players[p3]) + '</button>';
         }
         h += '</div>';
-        h += '<div class="subline">ملاحظة: في البنت المضاعفة، الآخذ يأخذ -٥٠ بدلاً من -٢٥، واللاعب المحدّد في الأسفل يأخذ +٢٥.</div>';
       }
       h += '</div>';
       return h;
@@ -901,18 +915,18 @@
     function renderKingSlot(d, prefix) {
       var q = prefix === 'kingHearts' ? d : d.king;
       var h = '<div class="card-slot">' +
-        '<div class="card-slot-header">' +
-          '<div><span class="card-symbol red">♥K</span> <span class="card-label">شايب الهاص</span></div>' +
-          '<button class="double-toggle' + (q.doubled ? ' active' : '') + '" onclick="toggleKingDoubled(\'' + prefix + '\')">مضاعَف</button>' +
-        '</div>';
-      h += '<div class="picker-row"><div class="picker-label">الآخذ:</div>';
+        '<div class="card-row">' +
+          '<span class="card-symbol red">♥K</span>' +
+          '<div class="pickers-inline">';
       for (var p = 0; p < 4; p++) {
         var active = q.taker === p ? ' active' : '';
         h += '<button class="picker-chip' + active + '" onclick="setKingTaker(\'' + prefix + '\',' + p + ')">' + escHtml(state.players[p]) + '</button>';
       }
-      h += '</div>';
+      h += '</div>' +
+          '<button class="double-toggle' + (q.doubled ? ' active' : '') + '" onclick="toggleKingDoubled(\'' + prefix + '\')">×٢</button>' +
+        '</div>';
       if (q.doubled) {
-        h += '<div class="picker-row"><div class="picker-label">-٧٥ إضافي:</div>';
+        h += '<div class="picker-row"><div class="picker-label">-١٥٠:</div>';
         for (var p2 = 0; p2 < 4; p2++) {
           var a2 = q.dnPlayer === p2 ? ' active' : '';
           h += '<button class="picker-chip' + a2 + '" onclick="setKingDnPlayer(\'' + prefix + '\',' + p2 + ')">' + escHtml(state.players[p2]) + '</button>';
@@ -924,7 +938,6 @@
           h += '<button class="picker-chip pos' + a3 + '" onclick="setKingUpPlayer(\'' + prefix + '\',' + p3 + ')">' + escHtml(state.players[p3]) + '</button>';
         }
         h += '</div>';
-        h += '<div class="subline">في الشايب المضاعف: الآخذ -١٥٠ (=-٧٥ إضافي)، واللاعب المحدّد يأخذ +٧٥.</div>';
       }
       h += '</div>';
       return h;
@@ -932,7 +945,6 @@
 
     function renderTrixForm() {
       var html = '<div class="contract-form">' + contractHeader('تركس') +
-        '<div class="contract-instruction">ترتيب اللاعبين من الأول إلى الرابع</div>' +
         '<div class="trix-order-list">';
       for (var rank = 0; rank < 4; rank++) {
         html += '<div class="trix-slot">' +
@@ -960,47 +972,43 @@
     function renderComplexForm() {
       var tricksTotal = draft.tricks.reduce(function(a, b) { return a + b; }, 0);
       var diamondsTotal = draft.diamonds.reduce(function(a, b) { return a + b; }, 0);
-      var html = '<div class="contract-form">' + contractHeader('كمبلكس') +
-        '<div class="contract-instruction">يد واحدة، والنقاط تُحسب للأربع كمم في نفس الوقت.</div>';
-      // Tricks
-      html += '<div style="font-weight:800;margin:10px 0 6px">أكلات (المجموع ١٣)</div>';
       var tricksAtMax = tricksTotal >= 13;
+      var diamondsAtMax = diamondsTotal >= 13;
+      var tricksOk = tricksTotal === 13;
+      var diamondsOk = diamondsTotal === 13;
+      var html = '<div class="contract-form">' + contractHeader('كمبلكس');
+      // Combined stepper grid: player | tricks | diamonds
+      html += '<div class="complex-counts">' +
+        '<div class="complex-counts-header">لاعب</div>' +
+        '<div class="complex-counts-header">أكلات (' + toAr(tricksTotal) + '/١٣)</div>' +
+        '<div class="complex-counts-header">ديمن (' + toAr(diamondsTotal) + '/١٣)</div>';
       for (var i = 0; i < 4; i++) {
-        var v = draft.tricks[i];
-        html += '<div class="stepper-row">' +
-          '<div class="stepper-name">' + escHtml(state.players[i]) + '</div>' +
-          '<div class="stepper-controls">' +
-            '<button class="stepper-btn" onclick="complexCountStep(\'tricks\',' + i + ',-1)" ' + (v <= 0 ? 'disabled' : '') + '>−</button>' +
-            '<div class="stepper-val">' + toAr(v) + '</div>' +
+        var tv = draft.tricks[i], dv = draft.diamonds[i];
+        html += '<div class="complex-counts-name">' + escHtml(state.players[i]) + '</div>' +
+          '<div class="mini-stepper">' +
+            '<button class="stepper-btn" onclick="complexCountStep(\'tricks\',' + i + ',-1)" ' + (tv <= 0 ? 'disabled' : '') + '>−</button>' +
+            '<div class="stepper-val">' + toAr(tv) + '</div>' +
             '<button class="stepper-btn" onclick="complexCountStep(\'tricks\',' + i + ',1)" ' + (tricksAtMax ? 'disabled' : '') + '>+</button>' +
           '</div>' +
-        '</div>';
+          '<div class="mini-stepper">' +
+            '<button class="stepper-btn" onclick="complexCountStep(\'diamonds\',' + i + ',-1)" ' + (dv <= 0 ? 'disabled' : '') + '>−</button>' +
+            '<div class="stepper-val">' + toAr(dv) + '</div>' +
+            '<button class="stepper-btn" onclick="complexCountStep(\'diamonds\',' + i + ',1)" ' + (diamondsAtMax ? 'disabled' : '') + '>+</button>' +
+          '</div>';
       }
-      html += '<div class="sum-hint ' + (tricksTotal === 13 ? 'ok' : 'bad') + '">المجموع: ' + toAr(tricksTotal) + ' / ١٣</div>';
-      // Diamonds
-      html += '<div style="font-weight:800;margin:10px 0 6px">ديمن (المجموع ١٣)</div>';
-      var diamondsAtMax = diamondsTotal >= 13;
-      for (var j = 0; j < 4; j++) {
-        var v2 = draft.diamonds[j];
-        html += '<div class="stepper-row">' +
-          '<div class="stepper-name">' + escHtml(state.players[j]) + '</div>' +
-          '<div class="stepper-controls">' +
-            '<button class="stepper-btn" onclick="complexCountStep(\'diamonds\',' + j + ',-1)" ' + (v2 <= 0 ? 'disabled' : '') + '>−</button>' +
-            '<div class="stepper-val">' + toAr(v2) + '</div>' +
-            '<button class="stepper-btn" onclick="complexCountStep(\'diamonds\',' + j + ',1)" ' + (diamondsAtMax ? 'disabled' : '') + '>+</button>' +
-          '</div>' +
-        '</div>';
+      html += '</div>';
+      if (!tricksOk || !diamondsOk) {
+        html += '<div class="sum-hint bad">' +
+          (tricksOk ? '' : 'الأكلات ' + toAr(tricksTotal) + '/١٣') +
+          (tricksOk || diamondsOk ? '' : ' • ') +
+          (diamondsOk ? '' : 'الديمن ' + toAr(diamondsTotal) + '/١٣') +
+          '</div>';
       }
-      html += '<div class="sum-hint ' + (diamondsTotal === 13 ? 'ok' : 'bad') + '">المجموع: ' + toAr(diamondsTotal) + ' / ١٣</div>';
-      // Queens
-      html += '<div style="font-weight:800;margin:10px 0 6px">بنات</div>';
+      // Queens + King
       draft.queens.forEach(function(q, qi) {
         html += renderDoubleableCard(q, qi, 'complex-queens');
       });
-      // King
-      html += '<div style="font-weight:800;margin:10px 0 6px">شايب الهاص</div>';
       html += renderKingSlot(draft, 'complex-king');
-      // Preview
       html += renderPreviewRow(computeContractScores(draft));
       var ok = isDraftComplete(draft);
       html += '<div class="btn-row">' +
