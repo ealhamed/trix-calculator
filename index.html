@@ -862,9 +862,15 @@
     }
 
     function renderDoubleableCard(q, qi, prefix) {
-      var h = '<div class="card-slot">' +
+      var isComplexDiamondQueen = prefix === 'complex-queens' && q.suit === 'diamonds';
+      var extraLabel = '';
+      if (isComplexDiamondQueen) {
+        var pts = q.doubled ? '-٦٠' : '-٣٥';
+        extraLabel = ' <span style="font-size:11px;font-weight:800;color:var(--gold-text);background:rgba(201,162,39,0.15);padding:2px 8px;border-radius:999px;margin-inline-start:6px">' + pts + ' مع الديمن</span>';
+      }
+      var h = '<div class="card-slot"' + (isComplexDiamondQueen ? ' style="border:1.5px solid var(--gold);background:rgba(201,162,39,0.06)"' : '') + '>' +
         '<div class="card-slot-header">' +
-          '<div><span class="card-symbol ' + (q.red ? 'red' : 'black') + '">' + q.symbol + '</span> <span class="card-label">بنت</span></div>' +
+          '<div><span class="card-symbol ' + (q.red ? 'red' : 'black') + '">' + q.symbol + '</span> <span class="card-label">بنت</span>' + extraLabel + '</div>' +
           '<button class="double-toggle' + (q.doubled ? ' active' : '') + '" onclick="toggleDoubled(\'' + prefix + '\',' + qi + ')">مضاعَف</button>' +
         '</div>';
       h += '<div class="picker-row"><div class="picker-label">الآخذ:</div>';
