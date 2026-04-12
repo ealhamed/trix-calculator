@@ -1,0 +1,1355 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#722F37">
+  <title>تركس - الديوانية</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --burgundy: #722F37; --gold: #C9A227; --gold-text: #8B6F1A;
+      --navy: #1A2744; --cream: #F5F0E6; --bg: #F5F0E6;
+    }
+    [data-theme="dark"] {
+      --bg: #0F1420; --cream: #E8E4DC;
+    }
+    html { background: var(--bg); min-height: 100%; }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+      font-family: 'Cairo', sans-serif; margin: 0; padding: 0;
+      background: var(--bg); color: var(--navy); min-height: 100vh;
+      padding-bottom: env(safe-area-inset-bottom, 0);
+    }
+    [data-theme="dark"] body { color: var(--cream); }
+    .app { max-width: 480px; margin: 0 auto; padding: 16px 12px 24px; position: relative; }
+    .header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+    .header img { width: 72px; height: 72px; object-fit: contain; }
+    .burger-btn {
+      width: 40px; height: 40px; border-radius: 12px; border: none;
+      background: rgba(26,39,68,0.08); color: var(--navy);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; flex-shrink: 0;
+    }
+    .burger-btn svg { width: 20px; height: 20px; }
+    h1 {
+      font-size: 20px; font-weight: 800; color: var(--burgundy);
+      margin: 0; flex: 1; text-align: center;
+    }
+    .spacer { width: 72px; flex-shrink: 0; }
+    [data-theme="dark"] h1 { color: var(--gold); }
+
+    /* Menu */
+    .menu-overlay {
+      position: fixed; inset: 0; background: rgba(26,39,68,0.5);
+      z-index: 90; opacity: 0; pointer-events: none; transition: opacity 0.3s;
+    }
+    .menu-overlay.open { opacity: 1; pointer-events: auto; }
+    .side-menu {
+      position: fixed; top: 0; right: 0; bottom: 0; width: 280px; max-width: 85vw;
+      background: var(--bg); z-index: 100; transform: translateX(100%);
+      transition: transform 0.3s; padding: 24px 20px; overflow-y: auto;
+      box-shadow: -4px 0 20px rgba(26,39,68,0.15);
+    }
+    .side-menu.open { transform: translateX(0); }
+    .menu-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+    .menu-title { font-size: 18px; font-weight: 800; color: var(--burgundy); }
+    .menu-close { background: none; border: none; cursor: pointer; color: var(--navy); }
+    .menu-section { margin-bottom: 20px; }
+    .menu-section-title { font-size: 12px; font-weight: 700; color: var(--gold-text); margin-bottom: 8px; opacity: 0.7; }
+    .menu-item {
+      display: flex; justify-content: space-between; align-items: center; width: 100%;
+      padding: 12px 14px; background: white; border: 1px solid rgba(26,39,68,0.08);
+      border-radius: 12px; font-family: 'Cairo', sans-serif; font-size: 14px; font-weight: 700;
+      color: var(--navy); cursor: pointer; margin-bottom: 6px; text-decoration: none;
+    }
+    .menu-item:disabled { opacity: 0.5; cursor: default; }
+    .menu-item svg { width: 16px; height: 16px; opacity: 0.6; }
+    .menu-footer { font-size: 11px; color: var(--navy); opacity: 0.4; text-align: center; margin-top: 30px; }
+    [data-theme="dark"] .side-menu { background: #151A26; }
+    [data-theme="dark"] .menu-item { background: rgba(245,240,230,0.06); border-color: rgba(245,240,230,0.1); color: var(--cream); }
+    [data-theme="dark"] .menu-title { color: var(--gold); }
+
+    /* Progress pill */
+    .progress-row { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 6px 0 14px; flex-wrap: wrap; }
+    .progress-pill {
+      background: var(--burgundy); color: var(--cream); border: none;
+      border-radius: 999px; padding: 8px 18px; font-family: 'Cairo', sans-serif;
+      font-size: 14px; font-weight: 800; min-height: 36px;
+      box-shadow: 0 2px 8px rgba(114,47,55,0.3);
+    }
+    .caller-pill {
+      background: var(--gold); color: var(--navy);
+      border-radius: 999px; padding: 6px 14px; font-size: 13px; font-weight: 800;
+    }
+
+    /* Player scoreboard */
+    .scoreboard { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+    .player-card {
+      background: white; border-radius: 14px; padding: 10px 8px; text-align: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06); cursor: pointer;
+      border: 2px solid transparent;
+    }
+    .player-card.is-current { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(201,162,39,0.2); }
+    .player-card.is-done { opacity: 0.55; }
+    .player-name { font-size: 13px; font-weight: 700; color: var(--navy); }
+    .player-total { font-size: 24px; font-weight: 900; color: var(--navy); margin: 2px 0; }
+    .player-total.neg { color: #2E7D32; }
+    .player-total.pos { color: var(--burgundy); }
+    .player-calls { font-size: 10px; opacity: 0.6; }
+    [data-theme="dark"] .player-card { background: rgba(245,240,230,0.06); }
+    [data-theme="dark"] .player-name, [data-theme="dark"] .player-total { color: var(--cream); }
+
+    /* Team cards (teams mode) */
+    .team-card {
+      background: white; border-radius: 14px; padding: 12px 10px;
+      border: 2px solid transparent; box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      margin-bottom: 12px;
+    }
+    .team-card.tcolor-0 { border-color: var(--burgundy); }
+    .team-card.tcolor-1 { border-color: var(--navy); }
+    .team-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px dashed rgba(0,0,0,0.1); }
+    .team-name { font-size: 13px; font-weight: 800; }
+    .team-card.tcolor-0 .team-name { color: var(--burgundy); }
+    .team-card.tcolor-1 .team-name { color: var(--navy); }
+    .team-total { font-size: 28px; font-weight: 900; color: var(--navy); }
+    [data-theme="dark"] .team-total { color: var(--cream); }
+    .team-players-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    [data-theme="dark"] .team-card { background: rgba(245,240,230,0.06); }
+
+    /* Call picker */
+    .call-picker {
+      background: white; border-radius: 16px; padding: 14px; margin-bottom: 14px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+    }
+    .call-picker-title { font-size: 14px; font-weight: 800; color: var(--navy); margin-bottom: 10px; text-align: center; }
+    .call-picker-title .caller-name { color: var(--burgundy); }
+    .call-options { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .call-btn {
+      background: rgba(26,39,68,0.06); color: var(--navy);
+      border: 2px solid transparent; border-radius: 12px; padding: 14px 8px;
+      font-family: 'Cairo', sans-serif; font-size: 13px; font-weight: 700;
+      cursor: pointer; min-height: 52px; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 2px;
+    }
+    .call-btn .sub { font-size: 10px; opacity: 0.6; }
+    .call-btn.special { background: var(--burgundy); color: var(--cream); grid-column: 1 / -1; }
+    .call-btn.trix { background: var(--gold); color: var(--navy); grid-column: 1 / -1; }
+    .call-btn:active { transform: scale(0.96); }
+    [data-theme="dark"] .call-picker { background: rgba(245,240,230,0.06); }
+    [data-theme="dark"] .call-btn { background: rgba(245,240,230,0.08); color: var(--cream); }
+
+    /* Contract entry */
+    .contract-form {
+      background: white; border-radius: 16px; padding: 14px; margin-bottom: 14px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+    }
+    [data-theme="dark"] .contract-form { background: rgba(245,240,230,0.06); }
+    .contract-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .contract-title { font-size: 16px; font-weight: 800; color: var(--burgundy); }
+    [data-theme="dark"] .contract-title { color: var(--gold); }
+    .contract-cancel {
+      background: none; border: none; color: var(--navy); cursor: pointer;
+      font-size: 13px; font-weight: 700; opacity: 0.7;
+    }
+    .contract-instruction { font-size: 12px; color: var(--navy); opacity: 0.7; margin-bottom: 12px; text-align: center; }
+    [data-theme="dark"] .contract-instruction { color: var(--cream); }
+
+    /* Stepper rows (tricks / diamonds) */
+    .stepper-row {
+      display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center;
+      padding: 8px 10px; background: rgba(26,39,68,0.04); border-radius: 10px; margin-bottom: 6px;
+    }
+    [data-theme="dark"] .stepper-row { background: rgba(245,240,230,0.04); }
+    .stepper-name { font-size: 13px; font-weight: 700; }
+    .stepper-controls { display: flex; align-items: center; gap: 4px; }
+    .stepper-btn {
+      width: 32px; height: 32px; border-radius: 50%; border: none;
+      background: var(--burgundy); color: var(--cream); font-size: 18px; font-weight: 800;
+      cursor: pointer; font-family: 'Cairo', sans-serif;
+    }
+    .stepper-btn:disabled { opacity: 0.3; }
+    .stepper-val { min-width: 28px; text-align: center; font-size: 16px; font-weight: 800; }
+    .sum-hint { font-size: 12px; text-align: center; margin: 8px 0; font-weight: 700; }
+    .sum-hint.ok { color: #2E7D32; }
+    .sum-hint.bad { color: var(--burgundy); }
+
+    /* Card assignment (queens / king) */
+    .card-slot {
+      background: rgba(26,39,68,0.04); border-radius: 12px; padding: 10px;
+      margin-bottom: 8px;
+    }
+    [data-theme="dark"] .card-slot { background: rgba(245,240,230,0.04); }
+    .card-slot-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+    .card-symbol { font-size: 22px; font-weight: 900; }
+    .card-symbol.red { color: #C62828; }
+    .card-symbol.black { color: var(--navy); }
+    [data-theme="dark"] .card-symbol.black { color: var(--cream); }
+    .card-label { font-size: 12px; font-weight: 700; }
+    .double-toggle {
+      background: rgba(201,162,39,0.15); border: 1.5px solid var(--gold);
+      color: var(--gold-text); border-radius: 999px; padding: 3px 10px;
+      font-family: 'Cairo', sans-serif; font-size: 11px; font-weight: 800; cursor: pointer;
+    }
+    .double-toggle.active { background: var(--gold); color: var(--navy); }
+    .picker-row { display: flex; gap: 4px; margin-top: 6px; flex-wrap: wrap; }
+    .picker-label { font-size: 11px; font-weight: 700; color: var(--navy); opacity: 0.7; min-width: 56px; }
+    [data-theme="dark"] .picker-label { color: var(--cream); }
+    .picker-chip {
+      background: white; border: 1.5px solid rgba(26,39,68,0.15); border-radius: 999px;
+      padding: 5px 11px; font-family: 'Cairo', sans-serif; font-size: 12px; font-weight: 700;
+      color: var(--navy); cursor: pointer;
+    }
+    .picker-chip.active { background: var(--burgundy); color: var(--cream); border-color: var(--burgundy); }
+    .picker-chip.pos.active { background: #2E7D32; border-color: #2E7D32; color: white; }
+    [data-theme="dark"] .picker-chip { background: rgba(245,240,230,0.06); color: var(--cream); border-color: rgba(245,240,230,0.12); }
+    .subline { font-size: 10px; opacity: 0.55; margin-top: 4px; }
+
+    /* Trix order */
+    .trix-order-list { display: flex; flex-direction: column; gap: 6px; }
+    .trix-slot {
+      background: rgba(26,39,68,0.04); border-radius: 10px; padding: 10px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    [data-theme="dark"] .trix-slot { background: rgba(245,240,230,0.04); }
+    .trix-rank { font-size: 18px; font-weight: 900; color: var(--gold-text); min-width: 28px; }
+    .trix-pts { font-size: 13px; font-weight: 800; color: var(--burgundy); }
+    [data-theme="dark"] .trix-pts { color: var(--gold); }
+    .trix-picker-chips { display: flex; gap: 4px; flex-wrap: wrap; }
+
+    /* Preview & confirm */
+    .preview-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 10px; }
+    .preview-cell {
+      background: rgba(26,39,68,0.04); border-radius: 10px; padding: 8px 4px;
+      text-align: center;
+    }
+    [data-theme="dark"] .preview-cell { background: rgba(245,240,230,0.04); }
+    .preview-name { font-size: 10px; font-weight: 700; opacity: 0.7; }
+    .preview-delta { font-size: 16px; font-weight: 900; }
+    .preview-delta.neg { color: var(--burgundy); }
+    .preview-delta.pos { color: #2E7D32; }
+
+    /* Buttons */
+    .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+    .btn-primary {
+      background: var(--burgundy); color: var(--cream); border: none; border-radius: 12px;
+      padding: 12px; font-family: 'Cairo', sans-serif; font-size: 14px; font-weight: 800;
+      cursor: pointer; min-height: 44px;
+    }
+    .btn-primary:disabled { opacity: 0.4; cursor: default; }
+    .btn-secondary {
+      background: rgba(26,39,68,0.06); color: var(--navy); border: 1px solid rgba(26,39,68,0.1);
+      border-radius: 12px; padding: 12px; font-family: 'Cairo', sans-serif;
+      font-size: 14px; font-weight: 700; cursor: pointer; min-height: 44px;
+    }
+    [data-theme="dark"] .btn-secondary { background: rgba(245,240,230,0.06); color: var(--cream); border-color: rgba(245,240,230,0.12); }
+
+    /* Bottom actions */
+    .bottom-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
+
+    /* History */
+    .history-wrap { margin-top: 16px; }
+    .history-title { font-size: 13px; font-weight: 800; color: var(--gold-text); margin-bottom: 6px; text-align: center; opacity: 0.7; }
+    .history-row {
+      display: grid; grid-template-columns: 24px 1fr auto; gap: 6px;
+      padding: 8px; background: rgba(26,39,68,0.03); border-radius: 10px;
+      margin-bottom: 4px; font-size: 12px; font-weight: 700; align-items: center;
+    }
+    [data-theme="dark"] .history-row { background: rgba(245,240,230,0.04); }
+    .history-idx { font-weight: 900; color: var(--gold-text); }
+    .history-contract { font-weight: 800; }
+    .history-caller { font-size: 10px; opacity: 0.6; font-weight: 600; }
+    .history-scores { display: flex; gap: 4px; }
+    .history-score {
+      display: inline-block; min-width: 28px; text-align: center;
+      padding: 2px 6px; border-radius: 6px; font-size: 11px; font-weight: 800;
+    }
+    .history-score.neg { background: rgba(114,47,55,0.15); color: var(--burgundy); }
+    .history-score.pos { background: rgba(46,125,50,0.15); color: #2E7D32; }
+    .history-score.zero { background: rgba(26,39,68,0.08); color: var(--navy); opacity: 0.5; }
+    [data-theme="dark"] .history-score.zero { color: var(--cream); }
+
+    /* Game over */
+    .game-over-overlay {
+      position: fixed; inset: 0; background: rgba(26,39,68,0.85);
+      display: flex; align-items: center; justify-content: center; z-index: 200;
+      padding: 20px;
+    }
+    .game-over-card {
+      background: var(--bg); border-radius: 20px; padding: 24px; max-width: 360px; width: 100%;
+      text-align: center;
+    }
+    .game-over-card h2 { margin: 0 0 14px; color: var(--burgundy); font-size: 22px; }
+    [data-theme="dark"] .game-over-card h2 { color: var(--gold); }
+    .ranking-list { list-style: none; padding: 0; margin: 0 0 16px; }
+    .ranking-list li {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px 14px; background: white; border-radius: 10px; margin-bottom: 6px;
+      font-weight: 700;
+    }
+    [data-theme="dark"] .ranking-list li { background: rgba(245,240,230,0.08); color: var(--cream); }
+    .ranking-medal { font-size: 20px; }
+
+    /* App dialog */
+    .app-dialog-overlay {
+      position: fixed; inset: 0; background: rgba(26,39,68,0.55);
+      display: flex; align-items: center; justify-content: center; z-index: 300; padding: 20px;
+    }
+    .app-dialog {
+      background: var(--bg); border-radius: 16px; padding: 20px;
+      max-width: 340px; width: 100%;
+    }
+    [data-theme="dark"] .app-dialog { background: #1A2030; }
+    .app-dialog-msg { font-size: 14px; font-weight: 700; margin-bottom: 14px; text-align: center; }
+    .app-dialog-input {
+      width: 100%; padding: 10px; font-family: 'Cairo', sans-serif;
+      border: 1.5px solid rgba(26,39,68,0.15); border-radius: 10px;
+      font-size: 14px; font-weight: 700; text-align: center; margin-bottom: 14px;
+      background: white; color: var(--navy); outline: none;
+    }
+    [data-theme="dark"] .app-dialog-input { background: rgba(245,240,230,0.08); color: var(--cream); border-color: rgba(245,240,230,0.15); }
+    .app-dialog-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .dlg-confirm { background: var(--burgundy); color: var(--cream); border: none; border-radius: 10px; padding: 10px; font-family: 'Cairo', sans-serif; font-weight: 800; cursor: pointer; }
+    .dlg-cancel { background: rgba(26,39,68,0.06); color: var(--navy); border: 1px solid rgba(26,39,68,0.1); border-radius: 10px; padding: 10px; font-family: 'Cairo', sans-serif; font-weight: 700; cursor: pointer; }
+    [data-theme="dark"] .dlg-cancel { background: rgba(245,240,230,0.06); color: var(--cream); border-color: rgba(245,240,230,0.12); }
+
+    /* Team assignment modal */
+    .modal-overlay-full {
+      position: fixed; inset: 0; background: rgba(26,39,68,0.5);
+      z-index: 150; display: none; align-items: flex-end; justify-content: center;
+    }
+    .modal-sheet {
+      background: var(--bg); border-radius: 24px 24px 0 0;
+      width: 100%; max-width: 430px; padding: 24px 20px env(safe-area-inset-bottom, 20px);
+      max-height: 90vh; overflow-y: auto;
+    }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .modal-title { font-size: 18px; font-weight: 800; color: var(--burgundy); }
+    [data-theme="dark"] .modal-title { color: var(--gold); }
+    .modal-close {
+      background: none; border: none; color: var(--navy); cursor: pointer;
+    }
+    [data-theme="dark"] .modal-close { color: var(--cream); }
+    .player-chip-list { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; padding: 8px 0 16px; }
+    .player-chip {
+      padding: 10px 16px; background: rgba(26,39,68,0.08);
+      border: 2px solid transparent; border-radius: 999px;
+      font-family: 'Cairo', sans-serif; font-weight: 700; font-size: 14px;
+      color: var(--navy); cursor: pointer; min-height: 40px;
+    }
+    [data-theme="dark"] .player-chip { background: rgba(245,240,230,0.08); color: var(--cream); }
+    .player-chip.selected { border-color: var(--gold); background: rgba(201,162,39,0.2); }
+    .player-chip.paired { opacity: 0.35; pointer-events: none; }
+    .pair-preview { display: flex; flex-direction: column; gap: 6px; padding: 6px 0; }
+    .pair-preview-row {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      font-size: 13px; font-weight: 700;
+    }
+    .pair-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; }
+
+    /* Auto-dim overlay */
+    .dim-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.78); z-index: 250;
+      display: none; cursor: pointer;
+    }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+    .contract-form, .call-picker, .scoreboard { animation: fadeIn 0.2s ease; }
+
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
+  </style>
+</head>
+<body>
+
+  <!-- Menu overlay + side menu -->
+  <div class="menu-overlay" id="menuOverlay" onclick="closeMenu()"></div>
+  <aside class="side-menu" id="sideMenu">
+    <div class="menu-header">
+      <div class="menu-title">القائمة</div>
+      <button class="menu-close" onclick="closeMenu()" aria-label="إغلاق">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="menu-section">
+      <div class="menu-section-title">الألعاب</div>
+      <a class="menu-item" href="https://ealhamed.github.io/baloot-calculator/"><span>حاسبة بلوت</span></a>
+      <a class="menu-item" href="https://ealhamed.github.io/sibeet-calculator/"><span>بنت السبيت</span></a>
+      <a class="menu-item" href="https://ealhamed.github.io/konkan-calculator/"><span>كنكان</span></a>
+      <button class="menu-item" disabled><span>تركس</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></button>
+    </div>
+    <div class="menu-section">
+      <div class="menu-section-title">الإعدادات</div>
+      <button class="menu-item" onclick="closeMenu();confirmNewGame()">
+        <span>جلسة جديدة</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+      </button>
+      <button class="menu-item" onclick="closeMenu();toggleTeamsMode()">
+        <span id="teamsModeLabel">وضع الفرق</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      </button>
+      <button class="menu-item" id="editTeamsMenuBtn" onclick="closeMenu();openTeamAssign()" style="display:none">
+        <span>تعديل الفرق</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      </button>
+      <button class="menu-item" onclick="toggleTheme()">
+        <span id="themeName">الوضع الداكن</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+    </div>
+    <div class="menu-footer">With warm regards from ESH</div>
+  </aside>
+
+  <!-- Team assignment modal -->
+  <div class="modal-overlay-full" id="teamAssignModal">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <div class="modal-title">تكوين الفرق</div>
+        <button class="modal-close" onclick="closeTeamAssign()" aria-label="إغلاق">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <p style="font-size:13px;opacity:0.7;margin:0 0 10px">اختر لاعبين لتكوين كل فريق.</p>
+      <div class="player-chip-list" id="teamAssignChips"></div>
+      <div class="pair-preview" id="teamAssignPairs"></div>
+      <div class="btn-row">
+        <button class="btn-secondary" onclick="resetTeamAssign()">إعادة تعيين</button>
+        <button class="btn-primary" id="teamAssignConfirmBtn" onclick="confirmTeamAssign()" disabled>تأكيد</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="dim-overlay" id="dimOverlay"></div>
+
+  <main class="app">
+    <div class="header">
+      <button class="burger-btn" onclick="openMenu()" aria-label="القائمة">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <img src="logo.png" alt="الديوانية">
+      <h1>حاسبة تركس</h1>
+      <div class="spacer"></div>
+    </div>
+
+    <div class="progress-row" id="progressRow"></div>
+    <div id="scoreboard"></div>
+    <div id="callArea"></div>
+    <div class="bottom-actions">
+      <button class="btn-secondary" onclick="undoLastCall()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-left:4px"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+        تراجع
+      </button>
+      <button class="btn-secondary" onclick="confirmNewGame()">جلسة جديدة</button>
+    </div>
+
+    <div class="history-wrap" id="historyWrap"></div>
+  </main>
+
+  <div id="gameOverOverlay" style="display:none"></div>
+
+  <script>
+    // ── Constants ──
+    var CONTRACTS = {
+      tricks: { name: 'أكلات', short: 'أكلات' },
+      diamonds: { name: 'ديمن', short: 'ديمن' },
+      queens: { name: 'بنات', short: 'بنات' },
+      kingHearts: { name: 'شايب الهاص', short: 'الشايب' },
+      trix: { name: 'تركس', short: 'تركس' },
+      complex: { name: 'كمبلكس', short: 'كمبلكس' }
+    };
+    var NON_TRIX_INDIVIDUAL = ['tricks', 'diamonds', 'queens', 'kingHearts'];
+    var TRIX_POINTS = [200, 150, 100, 50];
+    var SUITS = [
+      { key: 'spades',   symbol: '♠', red: false, label: 'بنت البستوني' },
+      { key: 'hearts',   symbol: '♥', red: true,  label: 'بنت الكبة' },
+      { key: 'diamonds', symbol: '♦', red: true,  label: 'بنت الديمن' },
+      { key: 'clubs',    symbol: '♣', red: false, label: 'بنت السبيتي' }
+    ];
+
+    // ── State ──
+    var state = loadState();
+    var draft = null; // current contract draft form state
+
+    function defaultState() {
+      return {
+        players: ['لاعب ١', 'لاعب ٢', 'لاعب ٣', 'لاعب ٤'],
+        totals: [0, 0, 0, 0],
+        callHistory: [],
+        playerCalls: [[], [], [], []],
+        playerPath: [null, null, null, null],
+        currentCaller: 0,
+        teamsMode: false,
+        teams: []
+      };
+    }
+
+    function loadState() {
+      try {
+        var s = JSON.parse(localStorage.getItem('trixState'));
+        if (!s) return defaultState();
+        var d = defaultState();
+        return {
+          players: s.players || d.players,
+          totals: s.totals || d.totals,
+          callHistory: s.callHistory || [],
+          playerCalls: s.playerCalls || [[], [], [], []],
+          playerPath: s.playerPath || [null, null, null, null],
+          currentCaller: typeof s.currentCaller === 'number' ? s.currentCaller : 0,
+          teamsMode: !!s.teamsMode,
+          teams: Array.isArray(s.teams) ? s.teams : []
+        };
+      } catch(e) { return defaultState(); }
+    }
+
+    function saveState() { localStorage.setItem('trixState', JSON.stringify(state)); }
+
+    // ── Utilities ──
+    function escHtml(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+    function toAr(n) { return String(n).replace(/\d/g, function(d) { return '٠١٢٣٤٥٦٧٨٩'[d]; }); }
+    function vibrate(n) { if (typeof navigator.vibrate === 'function') navigator.vibrate(n); }
+
+    // ── Dialogs ──
+    function appConfirm(message) {
+      return new Promise(function(resolve) {
+        var overlay = document.createElement('div');
+        overlay.className = 'app-dialog-overlay';
+        overlay.innerHTML = '<div class="app-dialog"><div class="app-dialog-msg">' + escHtml(message) + '</div><div class="app-dialog-actions"><button class="dlg-confirm" data-action="yes">نعم</button><button class="dlg-cancel" data-action="no">لا</button></div></div>';
+        overlay.addEventListener('click', function(e) {
+          var a = e.target.dataset && e.target.dataset.action;
+          if (a === 'yes') { overlay.remove(); resolve(true); }
+          else if (a === 'no') { overlay.remove(); resolve(false); }
+        });
+        pushOverlay('dialog');
+        document.body.appendChild(overlay);
+      });
+    }
+    function appPrompt(message, defaultValue) {
+      return new Promise(function(resolve) {
+        var overlay = document.createElement('div');
+        overlay.className = 'app-dialog-overlay';
+        overlay.innerHTML = '<div class="app-dialog"><div class="app-dialog-msg">' + escHtml(message) + '</div><input class="app-dialog-input" value="' + escHtml(defaultValue || '') + '"><div class="app-dialog-actions"><button class="dlg-confirm" data-action="yes">تم</button><button class="dlg-cancel" data-action="no">إلغاء</button></div></div>';
+        var input = overlay.querySelector('input');
+        setTimeout(function() { input.focus(); input.select(); }, 50);
+        input.addEventListener('keydown', function(e) { if (e.key === 'Enter') { overlay.remove(); resolve(input.value); } });
+        overlay.addEventListener('click', function(e) {
+          var a = e.target.dataset && e.target.dataset.action;
+          if (a === 'yes') { overlay.remove(); resolve(input.value); }
+          else if (a === 'no') { overlay.remove(); resolve(null); }
+        });
+        pushOverlay('dialog');
+        document.body.appendChild(overlay);
+      });
+    }
+
+    // ── Menu + popstate ──
+    function pushOverlay(id) { history.pushState({ overlay: id }, ''); }
+    window.addEventListener('popstate', function() {
+      if (document.getElementById('menuOverlay').classList.contains('open')) {
+        document.getElementById('menuOverlay').classList.remove('open');
+        document.getElementById('sideMenu').classList.remove('open');
+        return;
+      }
+      var teamModal = document.getElementById('teamAssignModal');
+      if (teamModal && teamModal.style.display === 'flex') { teamModal.style.display = 'none'; return; }
+      var dlg = document.querySelector('.app-dialog-overlay');
+      if (dlg) dlg.remove();
+    });
+    function openMenu() {
+      pushOverlay('menu');
+      document.getElementById('menuOverlay').classList.add('open');
+      document.getElementById('sideMenu').classList.add('open');
+    }
+    function closeMenu() {
+      document.getElementById('menuOverlay').classList.remove('open');
+      document.getElementById('sideMenu').classList.remove('open');
+    }
+
+    // ── Theme ──
+    function toggleTheme() {
+      var cur = document.documentElement.getAttribute('data-theme');
+      var next = cur === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      localStorage.setItem('trixTheme', next);
+      document.getElementById('themeName').textContent = next === 'dark' ? 'الوضع الفاتح' : 'الوضع الداكن';
+    }
+    (function() {
+      var t = localStorage.getItem('trixTheme') || 'light';
+      document.documentElement.setAttribute('data-theme', t);
+    })();
+
+    // ── Path helpers ──
+    function expectedCallsForPlayer(p) {
+      var path = state.playerPath[p];
+      if (path === '2-call') return 2;
+      if (path === '5-call') return 5;
+      // undecided: worst case remains unknown. If they've already called trix, still undecided.
+      return null;
+    }
+
+    function playerDone(p) {
+      var expected = expectedCallsForPlayer(p);
+      if (expected === null) return false;
+      return state.playerCalls[p].length >= expected;
+    }
+
+    function totalExpectedCalls() {
+      var sum = 0;
+      for (var i = 0; i < 4; i++) {
+        var e = expectedCallsForPlayer(i);
+        if (e === null) sum += state.playerCalls[i].length + 1; // assume minimum remaining (at least one more)
+        else sum += e;
+      }
+      return sum;
+    }
+
+    function validContractsForPlayer(p) {
+      var calls = state.playerCalls[p];
+      var path = state.playerPath[p];
+      var calledSet = {};
+      calls.forEach(function(c) { calledSet[c] = true; });
+      if (path === '2-call') {
+        if (calledSet.complex && !calledSet.trix) return ['trix'];
+        if (calledSet.trix && !calledSet.complex) return ['complex'];
+        return [];
+      }
+      if (path === '5-call') {
+        var remaining = [];
+        if (!calledSet.trix) remaining.push('trix');
+        NON_TRIX_INDIVIDUAL.forEach(function(c) { if (!calledSet[c]) remaining.push(c); });
+        return remaining;
+      }
+      // undecided: all options. If trix already called, complex + individuals (still can go either way on next pick).
+      if (calledSet.trix) {
+        return ['complex'].concat(NON_TRIX_INDIVIDUAL);
+      }
+      return ['trix', 'complex'].concat(NON_TRIX_INDIVIDUAL);
+    }
+
+    function allDone() {
+      for (var i = 0; i < 4; i++) if (!playerDone(i)) return false;
+      // Every player must have a committed path once every player is "done"
+      for (var i = 0; i < 4; i++) if (state.playerPath[i] === null) return false;
+      return true;
+    }
+
+    function advanceCaller() {
+      for (var step = 1; step <= 4; step++) {
+        var next = (state.currentCaller + step) % 4;
+        if (!playerDone(next)) { state.currentCaller = next; return; }
+      }
+    }
+
+    function getTeamIndexForPlayer(p) {
+      for (var i = 0; i < state.teams.length; i++) {
+        if (state.teams[i].indexOf(p) !== -1) return i;
+      }
+      return -1;
+    }
+    function getTeamTotal(ti) {
+      return state.teams[ti].reduce(function(sum, p) { return sum + state.totals[p]; }, 0);
+    }
+
+    // ── Render ──
+    function render() {
+      renderProgress();
+      renderScoreboard();
+      renderCallArea();
+      renderHistory();
+      checkGameOver();
+      updateTeamsMenuLabel();
+    }
+
+    function renderProgress() {
+      var row = document.getElementById('progressRow');
+      var done = state.callHistory.length;
+      var expected = totalExpectedCalls();
+      var caller = state.currentCaller;
+      var callerName = state.players[caller];
+      var pillHtml = '<div class="progress-pill">المملكة ' + toAr(done + 1) + ' / ' + toAr(expected) + '</div>';
+      var callerHtml = allDone() ? '' : '<div class="caller-pill">الدور: ' + escHtml(callerName) + '</div>';
+      row.innerHTML = pillHtml + callerHtml;
+    }
+
+    function renderScoreboard() {
+      var el = document.getElementById('scoreboard');
+      if (state.teamsMode && state.teams.length > 0) {
+        var html = '';
+        state.teams.forEach(function(pair, ti) {
+          var teamTotal = getTeamTotal(ti);
+          var teamLabel = pair.map(function(p) { return state.players[p]; }).join(' و');
+          html += '<div class="team-card tcolor-' + ti + '">' +
+            '<div class="team-header"><div class="team-name">فريق ' + toAr(ti + 1) + ' — ' + escHtml(teamLabel) + '</div>' +
+            '<div class="team-total">' + toAr(teamTotal) + '</div></div>' +
+            '<div class="team-players-grid">';
+          pair.forEach(function(pi) { html += buildPlayerCardHtml(pi); });
+          html += '</div></div>';
+        });
+        el.innerHTML = html;
+      } else {
+        var html2 = '<div class="scoreboard">';
+        for (var i = 0; i < 4; i++) html2 += buildPlayerCardHtml(i);
+        html2 += '</div>';
+        el.innerHTML = html2;
+      }
+    }
+
+    function buildPlayerCardHtml(i) {
+      var isCurrent = i === state.currentCaller && !allDone() && !playerDone(i);
+      var isDone = playerDone(i);
+      var total = state.totals[i];
+      var cls = 'player-card';
+      if (isCurrent) cls += ' is-current';
+      if (isDone) cls += ' is-done';
+      var totalCls = total > 0 ? ' pos' : (total < 0 ? ' neg' : '');
+      var callsCount = state.playerCalls[i].length;
+      var expected = expectedCallsForPlayer(i);
+      var pathLabel = expected === null ? '؟' : toAr(callsCount) + '/' + toAr(expected);
+      return '<div class="' + cls + '" onclick="selectCaller(' + i + ')">' +
+        '<div class="player-name" ondblclick="event.stopPropagation();renamePlayer(' + i + ')">' + escHtml(state.players[i]) + '</div>' +
+        '<div class="player-total' + totalCls + '">' + toAr(total) + '</div>' +
+        '<div class="player-calls">' + pathLabel + ' ممالك</div>' +
+        '</div>';
+    }
+
+    async function renamePlayer(i) {
+      var n = await appPrompt('اسم اللاعب:', state.players[i]);
+      if (n) { state.players[i] = n; saveState(); render(); }
+    }
+
+    function selectCaller(i) {
+      if (playerDone(i)) return;
+      state.currentCaller = i;
+      draft = null;
+      saveState(); render();
+    }
+
+    function renderCallArea() {
+      var el = document.getElementById('callArea');
+      if (allDone()) { el.innerHTML = ''; return; }
+      if (draft) { el.innerHTML = renderContractForm(); wireContractForm(); return; }
+      el.innerHTML = renderCallPicker();
+    }
+
+    // ── Call picker ──
+    function renderCallPicker() {
+      var caller = state.currentCaller;
+      var valid = validContractsForPlayer(caller);
+      var html = '<div class="call-picker">' +
+        '<div class="call-picker-title">اختر الكمة — <span class="caller-name">' + escHtml(state.players[caller]) + '</span></div>' +
+        '<div class="call-options">';
+      // Trix and Complex are wide buttons
+      if (valid.indexOf('trix') !== -1) html += '<button class="call-btn trix" onclick="startContract(\'trix\')">تركس<span class="sub">١/٢/٣/٤ = ٢٠٠/١٥٠/١٠٠/٥٠+</span></button>';
+      if (valid.indexOf('complex') !== -1) html += '<button class="call-btn special" onclick="startContract(\'complex\')">كمبلكس<span class="sub">الأربع كمم مع بعض</span></button>';
+      // Individuals in a grid
+      var labels = {
+        tricks: { t: 'أكلات', sub: '-١٥ للأكلة' },
+        diamonds: { t: 'ديمن', sub: '-١٠ للديمنة' },
+        queens: { t: 'بنات', sub: '-٢٥ للبنت' },
+        kingHearts: { t: 'شايب الهاص', sub: '-٧٥ للشايب' }
+      };
+      NON_TRIX_INDIVIDUAL.forEach(function(k) {
+        if (valid.indexOf(k) !== -1) {
+          html += '<button class="call-btn" onclick="startContract(\'' + k + '\')">' + labels[k].t + '<span class="sub">' + labels[k].sub + '</span></button>';
+        }
+      });
+      html += '</div></div>';
+      return html;
+    }
+
+    function startContract(contract) {
+      draft = buildDraft(contract);
+      vibrate(10);
+      render();
+    }
+
+    function buildDraft(contract) {
+      if (contract === 'tricks' || contract === 'diamonds') {
+        return { contract: contract, counts: [0, 0, 0, 0] };
+      }
+      if (contract === 'queens') {
+        return {
+          contract: 'queens',
+          queens: SUITS.map(function(s) { return { suit: s.key, symbol: s.symbol, red: s.red, taker: null, doubled: false, dnPlayer: null, upPlayer: null }; })
+        };
+      }
+      if (contract === 'kingHearts') {
+        return { contract: 'kingHearts', taker: null, doubled: false, dnPlayer: null, upPlayer: null };
+      }
+      if (contract === 'trix') {
+        return { contract: 'trix', order: [null, null, null, null] };
+      }
+      if (contract === 'complex') {
+        return {
+          contract: 'complex',
+          tricks: [0, 0, 0, 0],
+          diamonds: [0, 0, 0, 0],
+          queens: SUITS.map(function(s) { return { suit: s.key, symbol: s.symbol, red: s.red, taker: null, doubled: false, dnPlayer: null, upPlayer: null }; }),
+          king: { taker: null, doubled: false, dnPlayer: null, upPlayer: null }
+        };
+      }
+    }
+
+    // ── Contract form renderer ──
+    function renderContractForm() {
+      var c = draft.contract;
+      if (c === 'tricks' || c === 'diamonds') return renderCountForm(c);
+      if (c === 'queens') return renderQueensForm();
+      if (c === 'kingHearts') return renderKingForm();
+      if (c === 'trix') return renderTrixForm();
+      if (c === 'complex') return renderComplexForm();
+      return '';
+    }
+
+    function contractHeader(title) {
+      return '<div class="contract-header"><div class="contract-title">' + title + ' — ' + escHtml(state.players[state.currentCaller]) + '</div>' +
+        '<button class="contract-cancel" onclick="cancelContract()">إلغاء</button></div>';
+    }
+
+    function renderCountForm(contract) {
+      var total = draft.counts.reduce(function(a, b) { return a + b; }, 0);
+      var title = contract === 'tricks' ? 'أكلات' : 'ديمن';
+      var unit = contract === 'tricks' ? 'أكلات' : 'ديمن';
+      var html = '<div class="contract-form">' + contractHeader(title) +
+        '<div class="contract-instruction">كم ' + unit + ' أخذ كل لاعب؟ المجموع يجب أن يكون ١٣</div>';
+      for (var i = 0; i < 4; i++) {
+        var v = draft.counts[i];
+        html += '<div class="stepper-row">' +
+          '<div class="stepper-name">' + escHtml(state.players[i]) + '</div>' +
+          '<div class="stepper-controls">' +
+            '<button class="stepper-btn" onclick="countStep(' + i + ',-1)" ' + (v <= 0 ? 'disabled' : '') + '>−</button>' +
+            '<div class="stepper-val">' + toAr(v) + '</div>' +
+            '<button class="stepper-btn" onclick="countStep(' + i + ',1)" ' + (v >= 13 ? 'disabled' : '') + '>+</button>' +
+          '</div>' +
+        '</div>';
+      }
+      var ok = total === 13;
+      html += '<div class="sum-hint ' + (ok ? 'ok' : 'bad') + '">المجموع: ' + toAr(total) + ' / ١٣</div>';
+      html += renderPreviewRow(computeContractScores(draft));
+      html += '<div class="btn-row">' +
+        '<button class="btn-secondary" onclick="cancelContract()">إلغاء</button>' +
+        '<button class="btn-primary" onclick="submitContract()" ' + (ok ? '' : 'disabled') + '>تأكيد</button>' +
+        '</div></div>';
+      return html;
+    }
+
+    function renderQueensForm() {
+      var html = '<div class="contract-form">' + contractHeader('بنات') +
+        '<div class="contract-instruction">عيّن من أخذ كل بنت. اضغط "مضاعَف" لتحديد بنت مضاعفة.</div>';
+      draft.queens.forEach(function(q, qi) {
+        html += renderDoubleableCard(q, qi, 'queens');
+      });
+      html += renderPreviewRow(computeContractScores(draft));
+      html += '<div class="btn-row">' +
+        '<button class="btn-secondary" onclick="cancelContract()">إلغاء</button>' +
+        '<button class="btn-primary" onclick="submitContract()" ' + (isDraftComplete(draft) ? '' : 'disabled') + '>تأكيد</button>' +
+        '</div></div>';
+      return html;
+    }
+
+    function renderKingForm() {
+      var html = '<div class="contract-form">' + contractHeader('شايب الهاص') +
+        '<div class="contract-instruction">من أخذ شايب الهاص؟</div>';
+      html += renderKingSlot(draft, 'kingHearts');
+      html += renderPreviewRow(computeContractScores(draft));
+      html += '<div class="btn-row">' +
+        '<button class="btn-secondary" onclick="cancelContract()">إلغاء</button>' +
+        '<button class="btn-primary" onclick="submitContract()" ' + (isDraftComplete(draft) ? '' : 'disabled') + '>تأكيد</button>' +
+        '</div></div>';
+      return html;
+    }
+
+    function renderDoubleableCard(q, qi, prefix) {
+      var h = '<div class="card-slot">' +
+        '<div class="card-slot-header">' +
+          '<div><span class="card-symbol ' + (q.red ? 'red' : 'black') + '">' + q.symbol + '</span> <span class="card-label">بنت</span></div>' +
+          '<button class="double-toggle' + (q.doubled ? ' active' : '') + '" onclick="toggleDoubled(\'' + prefix + '\',' + qi + ')">مضاعَف</button>' +
+        '</div>';
+      h += '<div class="picker-row"><div class="picker-label">الآخذ:</div>';
+      for (var p = 0; p < 4; p++) {
+        var active = q.taker === p ? ' active' : '';
+        h += '<button class="picker-chip' + active + '" onclick="setTaker(\'' + prefix + '\',' + qi + ',' + p + ')">' + escHtml(state.players[p]) + '</button>';
+      }
+      h += '</div>';
+      if (q.doubled) {
+        h += '<div class="picker-row"><div class="picker-label">-٢٥ إضافي:</div>';
+        for (var p2 = 0; p2 < 4; p2++) {
+          var a2 = q.dnPlayer === p2 ? ' active' : '';
+          h += '<button class="picker-chip' + a2 + '" onclick="setDnPlayer(\'' + prefix + '\',' + qi + ',' + p2 + ')">' + escHtml(state.players[p2]) + '</button>';
+        }
+        h += '</div>';
+        h += '<div class="picker-row"><div class="picker-label">+٢٥:</div>';
+        for (var p3 = 0; p3 < 4; p3++) {
+          var a3 = q.upPlayer === p3 ? ' active' : '';
+          h += '<button class="picker-chip pos' + a3 + '" onclick="setUpPlayer(\'' + prefix + '\',' + qi + ',' + p3 + ')">' + escHtml(state.players[p3]) + '</button>';
+        }
+        h += '</div>';
+        h += '<div class="subline">ملاحظة: في البنت المضاعفة، الآخذ يأخذ -٥٠ بدلاً من -٢٥، واللاعب المحدّد في الأسفل يأخذ +٢٥.</div>';
+      }
+      h += '</div>';
+      return h;
+    }
+
+    function renderKingSlot(d, prefix) {
+      var q = prefix === 'kingHearts' ? d : d.king;
+      var h = '<div class="card-slot">' +
+        '<div class="card-slot-header">' +
+          '<div><span class="card-symbol red">♥K</span> <span class="card-label">شايب الهاص</span></div>' +
+          '<button class="double-toggle' + (q.doubled ? ' active' : '') + '" onclick="toggleKingDoubled(\'' + prefix + '\')">مضاعَف</button>' +
+        '</div>';
+      h += '<div class="picker-row"><div class="picker-label">الآخذ:</div>';
+      for (var p = 0; p < 4; p++) {
+        var active = q.taker === p ? ' active' : '';
+        h += '<button class="picker-chip' + active + '" onclick="setKingTaker(\'' + prefix + '\',' + p + ')">' + escHtml(state.players[p]) + '</button>';
+      }
+      h += '</div>';
+      if (q.doubled) {
+        h += '<div class="picker-row"><div class="picker-label">-٧٥ إضافي:</div>';
+        for (var p2 = 0; p2 < 4; p2++) {
+          var a2 = q.dnPlayer === p2 ? ' active' : '';
+          h += '<button class="picker-chip' + a2 + '" onclick="setKingDnPlayer(\'' + prefix + '\',' + p2 + ')">' + escHtml(state.players[p2]) + '</button>';
+        }
+        h += '</div>';
+        h += '<div class="picker-row"><div class="picker-label">+٧٥:</div>';
+        for (var p3 = 0; p3 < 4; p3++) {
+          var a3 = q.upPlayer === p3 ? ' active' : '';
+          h += '<button class="picker-chip pos' + a3 + '" onclick="setKingUpPlayer(\'' + prefix + '\',' + p3 + ')">' + escHtml(state.players[p3]) + '</button>';
+        }
+        h += '</div>';
+        h += '<div class="subline">في الشايب المضاعف: الآخذ -١٥٠ (=-٧٥ إضافي)، واللاعب المحدّد يأخذ +٧٥.</div>';
+      }
+      h += '</div>';
+      return h;
+    }
+
+    function renderTrixForm() {
+      var html = '<div class="contract-form">' + contractHeader('تركس') +
+        '<div class="contract-instruction">ترتيب اللاعبين من الأول إلى الرابع</div>' +
+        '<div class="trix-order-list">';
+      for (var rank = 0; rank < 4; rank++) {
+        html += '<div class="trix-slot">' +
+          '<div><span class="trix-rank">' + toAr(rank + 1) + '°</span> <span class="trix-pts">' + (TRIX_POINTS[rank] > 0 ? '+' : '') + toAr(TRIX_POINTS[rank]) + '</span></div>' +
+          '<div class="trix-picker-chips">';
+        for (var p = 0; p < 4; p++) {
+          var selected = draft.order[rank] === p;
+          var usedElsewhere = draft.order.indexOf(p) !== -1 && !selected;
+          var cls = 'picker-chip pos' + (selected ? ' active' : '');
+          var disabledAttr = usedElsewhere ? ' style="opacity:0.3;pointer-events:none"' : '';
+          html += '<button class="' + cls + '"' + disabledAttr + ' onclick="setTrixRank(' + rank + ',' + p + ')">' + escHtml(state.players[p]) + '</button>';
+        }
+        html += '</div></div>';
+      }
+      html += '</div>';
+      html += renderPreviewRow(computeContractScores(draft));
+      var done = draft.order.every(function(o) { return o !== null; });
+      html += '<div class="btn-row">' +
+        '<button class="btn-secondary" onclick="cancelContract()">إلغاء</button>' +
+        '<button class="btn-primary" onclick="submitContract()" ' + (done ? '' : 'disabled') + '>تأكيد</button>' +
+        '</div></div>';
+      return html;
+    }
+
+    function renderComplexForm() {
+      var tricksTotal = draft.tricks.reduce(function(a, b) { return a + b; }, 0);
+      var diamondsTotal = draft.diamonds.reduce(function(a, b) { return a + b; }, 0);
+      var html = '<div class="contract-form">' + contractHeader('كمبلكس') +
+        '<div class="contract-instruction">يد واحدة، والنقاط تُحسب للأربع كمم في نفس الوقت.</div>';
+      // Tricks
+      html += '<div style="font-weight:800;margin:10px 0 6px">أكلات (المجموع ١٣)</div>';
+      for (var i = 0; i < 4; i++) {
+        var v = draft.tricks[i];
+        html += '<div class="stepper-row">' +
+          '<div class="stepper-name">' + escHtml(state.players[i]) + '</div>' +
+          '<div class="stepper-controls">' +
+            '<button class="stepper-btn" onclick="complexCountStep(\'tricks\',' + i + ',-1)" ' + (v <= 0 ? 'disabled' : '') + '>−</button>' +
+            '<div class="stepper-val">' + toAr(v) + '</div>' +
+            '<button class="stepper-btn" onclick="complexCountStep(\'tricks\',' + i + ',1)" ' + (v >= 13 ? 'disabled' : '') + '>+</button>' +
+          '</div>' +
+        '</div>';
+      }
+      html += '<div class="sum-hint ' + (tricksTotal === 13 ? 'ok' : 'bad') + '">المجموع: ' + toAr(tricksTotal) + ' / ١٣</div>';
+      // Diamonds
+      html += '<div style="font-weight:800;margin:10px 0 6px">ديمن (المجموع ١٣)</div>';
+      for (var j = 0; j < 4; j++) {
+        var v2 = draft.diamonds[j];
+        html += '<div class="stepper-row">' +
+          '<div class="stepper-name">' + escHtml(state.players[j]) + '</div>' +
+          '<div class="stepper-controls">' +
+            '<button class="stepper-btn" onclick="complexCountStep(\'diamonds\',' + j + ',-1)" ' + (v2 <= 0 ? 'disabled' : '') + '>−</button>' +
+            '<div class="stepper-val">' + toAr(v2) + '</div>' +
+            '<button class="stepper-btn" onclick="complexCountStep(\'diamonds\',' + j + ',1)" ' + (v2 >= 13 ? 'disabled' : '') + '>+</button>' +
+          '</div>' +
+        '</div>';
+      }
+      html += '<div class="sum-hint ' + (diamondsTotal === 13 ? 'ok' : 'bad') + '">المجموع: ' + toAr(diamondsTotal) + ' / ١٣</div>';
+      // Queens
+      html += '<div style="font-weight:800;margin:10px 0 6px">بنات</div>';
+      draft.queens.forEach(function(q, qi) {
+        html += renderDoubleableCard(q, qi, 'complex-queens');
+      });
+      // King
+      html += '<div style="font-weight:800;margin:10px 0 6px">شايب الهاص</div>';
+      html += renderKingSlot(draft, 'complex-king');
+      // Preview
+      html += renderPreviewRow(computeContractScores(draft));
+      var ok = isDraftComplete(draft);
+      html += '<div class="btn-row">' +
+        '<button class="btn-secondary" onclick="cancelContract()">إلغاء</button>' +
+        '<button class="btn-primary" onclick="submitContract()" ' + (ok ? '' : 'disabled') + '>تأكيد</button>' +
+        '</div></div>';
+      return html;
+    }
+
+    function renderPreviewRow(scores) {
+      var h = '<div class="preview-row">';
+      for (var i = 0; i < 4; i++) {
+        var s = scores[i] || 0;
+        var cls = s > 0 ? 'pos' : (s < 0 ? 'neg' : '');
+        var prefix = s > 0 ? '+' : '';
+        h += '<div class="preview-cell"><div class="preview-name">' + escHtml(state.players[i]) + '</div>' +
+          '<div class="preview-delta ' + cls + '">' + prefix + toAr(s) + '</div></div>';
+      }
+      h += '</div>';
+      return h;
+    }
+
+    function wireContractForm() { /* no-op for now; all inline handlers */ }
+
+    // ── Form actions ──
+    function countStep(i, delta) {
+      var newVal = draft.counts[i] + delta;
+      if (newVal < 0 || newVal > 13) return;
+      draft.counts[i] = newVal; render();
+    }
+    function complexCountStep(key, i, delta) {
+      var newVal = draft[key][i] + delta;
+      if (newVal < 0 || newVal > 13) return;
+      draft[key][i] = newVal; render();
+    }
+    function toggleDoubled(prefix, qi) {
+      var q = prefix === 'queens' ? draft.queens[qi] : draft.queens[qi];
+      q.doubled = !q.doubled;
+      if (!q.doubled) { q.dnPlayer = null; q.upPlayer = null; }
+      render();
+    }
+    function setTaker(prefix, qi, p) {
+      var q = prefix === 'queens' ? draft.queens[qi] : draft.queens[qi];
+      q.taker = q.taker === p ? null : p;
+      render();
+    }
+    function setDnPlayer(prefix, qi, p) {
+      var q = prefix === 'queens' ? draft.queens[qi] : draft.queens[qi];
+      q.dnPlayer = q.dnPlayer === p ? null : p; render();
+    }
+    function setUpPlayer(prefix, qi, p) {
+      var q = prefix === 'queens' ? draft.queens[qi] : draft.queens[qi];
+      q.upPlayer = q.upPlayer === p ? null : p; render();
+    }
+    function toggleKingDoubled(prefix) {
+      var k = prefix === 'kingHearts' ? draft : draft.king;
+      k.doubled = !k.doubled;
+      if (!k.doubled) { k.dnPlayer = null; k.upPlayer = null; }
+      render();
+    }
+    function setKingTaker(prefix, p) {
+      var k = prefix === 'kingHearts' ? draft : draft.king;
+      k.taker = k.taker === p ? null : p; render();
+    }
+    function setKingDnPlayer(prefix, p) {
+      var k = prefix === 'kingHearts' ? draft : draft.king;
+      k.dnPlayer = k.dnPlayer === p ? null : p; render();
+    }
+    function setKingUpPlayer(prefix, p) {
+      var k = prefix === 'kingHearts' ? draft : draft.king;
+      k.upPlayer = k.upPlayer === p ? null : p; render();
+    }
+    function setTrixRank(rank, p) {
+      if (draft.order[rank] === p) { draft.order[rank] = null; render(); return; }
+      // remove p from any other slot
+      for (var r = 0; r < 4; r++) if (draft.order[r] === p) draft.order[r] = null;
+      draft.order[rank] = p;
+      render();
+    }
+    function cancelContract() { draft = null; render(); }
+
+    // ── Scoring engine ──
+    function computeContractScores(d) {
+      var scores = [0, 0, 0, 0];
+      var c = d.contract;
+      if (c === 'tricks') {
+        for (var i = 0; i < 4; i++) scores[i] = -15 * d.counts[i];
+      }
+      else if (c === 'diamonds') {
+        for (var i = 0; i < 4; i++) scores[i] = -10 * d.counts[i];
+      }
+      else if (c === 'queens') {
+        d.queens.forEach(function(q) { applyDoubleableScore(q, scores, 25); });
+      }
+      else if (c === 'kingHearts') {
+        applyDoubleableScore(d, scores, 75);
+      }
+      else if (c === 'trix') {
+        for (var r = 0; r < 4; r++) {
+          if (d.order[r] !== null) scores[d.order[r]] += TRIX_POINTS[r];
+        }
+      }
+      else if (c === 'complex') {
+        for (var i = 0; i < 4; i++) scores[i] += -15 * d.tricks[i];
+        for (var i = 0; i < 4; i++) scores[i] += -10 * d.diamonds[i];
+        d.queens.forEach(function(q) { applyDoubleableScore(q, scores, 25); });
+        applyDoubleableScore(d.king, scores, 75);
+      }
+      return scores;
+    }
+
+    function applyDoubleableScore(card, scores, base) {
+      if (card.taker === null) return;
+      if (!card.doubled) {
+        scores[card.taker] += -base;
+        return;
+      }
+      // Doubled: downside target -2*base, upside target +base.
+      // Our UI lets the user pick dnPlayer/upPlayer explicitly.
+      // dnPlayer is usually the taker (gets -2*base), upPlayer is the doubler/forcer (gets +base).
+      // If dnPlayer and upPlayer are the same, the same player gets -2*base +base = -base (net).
+      if (card.dnPlayer === null || card.upPlayer === null) {
+        // incomplete — just apply plain taker penalty as a fallback
+        scores[card.taker] += -base;
+        return;
+      }
+      scores[card.dnPlayer] += -2 * base;
+      scores[card.upPlayer] += base;
+    }
+
+    function isDraftComplete(d) {
+      var c = d.contract;
+      if (c === 'tricks' || c === 'diamonds') {
+        return d.counts.reduce(function(a, b) { return a + b; }, 0) === 13;
+      }
+      if (c === 'queens') return d.queens.every(isDoubleableComplete);
+      if (c === 'kingHearts') return isDoubleableComplete(d);
+      if (c === 'trix') return d.order.every(function(o) { return o !== null; });
+      if (c === 'complex') {
+        return d.tricks.reduce(function(a, b) { return a + b; }, 0) === 13 &&
+          d.diamonds.reduce(function(a, b) { return a + b; }, 0) === 13 &&
+          d.queens.every(isDoubleableComplete) &&
+          isDoubleableComplete(d.king);
+      }
+      return false;
+    }
+
+    function isDoubleableComplete(card) {
+      if (card.taker === null) return false;
+      if (card.doubled) {
+        if (card.dnPlayer === null || card.upPlayer === null) return false;
+      }
+      return true;
+    }
+
+    function submitContract() {
+      if (!isDraftComplete(draft)) return;
+      var scores = computeContractScores(draft);
+      var caller = state.currentCaller;
+      // Commit path
+      var contract = draft.contract;
+      state.playerCalls[caller].push(contract);
+      if (state.playerPath[caller] === null) {
+        if (contract === 'complex') state.playerPath[caller] = '2-call';
+        else if (contract !== 'trix') state.playerPath[caller] = '5-call';
+        // If trix: path stays null (undecided)
+      }
+      // Apply scores
+      for (var i = 0; i < 4; i++) state.totals[i] += scores[i];
+      // Record
+      state.callHistory.push({ caller: caller, contract: contract, scores: scores, draft: draft });
+      draft = null;
+      advanceCaller();
+      saveState(); vibrate(20); render();
+    }
+
+    async function undoLastCall() {
+      if (state.callHistory.length === 0) return;
+      if (!(await appConfirm('تراجع عن آخر مملكة؟'))) return;
+      var last = state.callHistory.pop();
+      var caller = last.caller;
+      // Remove last call from player's calls
+      state.playerCalls[caller].pop();
+      // Reverse path commitment if this call was the one that set it
+      if (state.playerCalls[caller].length === 0) {
+        state.playerPath[caller] = null;
+      } else if (state.playerCalls[caller].length === 1 && state.playerCalls[caller][0] === 'trix') {
+        state.playerPath[caller] = null;
+      }
+      // Reverse scores
+      for (var i = 0; i < 4; i++) state.totals[i] -= last.scores[i];
+      state.currentCaller = caller;
+      draft = null;
+      saveState(); vibrate([10, 30, 10]); render();
+    }
+
+    // ── History ──
+    function renderHistory() {
+      var wrap = document.getElementById('historyWrap');
+      if (state.callHistory.length === 0) { wrap.innerHTML = ''; return; }
+      var html = '<div class="history-title">سجل الممالك</div>';
+      state.callHistory.forEach(function(row, idx) {
+        html += '<div class="history-row">' +
+          '<div class="history-idx">' + toAr(idx + 1) + '</div>' +
+          '<div><div class="history-contract">' + CONTRACTS[row.contract].name + '</div>' +
+          '<div class="history-caller">' + escHtml(state.players[row.caller]) + '</div></div>' +
+          '<div class="history-scores">';
+        for (var i = 0; i < 4; i++) {
+          var s = row.scores[i];
+          var cls = s > 0 ? 'pos' : (s < 0 ? 'neg' : 'zero');
+          var prefix = s > 0 ? '+' : '';
+          html += '<span class="history-score ' + cls + '" title="' + escHtml(state.players[i]) + '">' + prefix + toAr(s) + '</span>';
+        }
+        html += '</div></div>';
+      });
+      wrap.innerHTML = html;
+    }
+
+    // ── Game over ──
+    function checkGameOver() {
+      var overlay = document.getElementById('gameOverOverlay');
+      if (!allDone()) { overlay.style.display = 'none'; return; }
+      var medals = ['🥇', '🥈', '🥉'];
+      var html = '<div class="game-over-overlay"><div class="game-over-card"><h2>انتهت الجلسة!</h2><ul class="ranking-list">';
+      if (state.teamsMode && state.teams.length === 2) {
+        var ranked = state.teams.map(function(pair, ti) {
+          var name = pair.map(function(p) { return state.players[p]; }).join(' و');
+          return { name: 'فريق ' + toAr(ti + 1) + ' — ' + name, total: getTeamTotal(ti) };
+        }).sort(function(a, b) { return a.total - b.total; });
+        ranked.forEach(function(p, i) {
+          var m = medals[i] || '';
+          html += '<li>' + (m ? '<span class="ranking-medal">' + m + '</span>' : '') +
+            '<span>' + escHtml(p.name) + '</span><span>' + toAr(p.total) + '</span></li>';
+        });
+      } else {
+        var rankedP = state.players.map(function(n, i) { return { name: n, total: state.totals[i] }; }).sort(function(a, b) { return a.total - b.total; });
+        rankedP.forEach(function(p, i) {
+          var m = medals[i] || '';
+          html += '<li>' + (m ? '<span class="ranking-medal">' + m + '</span>' : '') +
+            '<span>' + escHtml(p.name) + '</span><span>' + toAr(p.total) + '</span></li>';
+        });
+      }
+      html += '</ul><button class="btn-primary" onclick="confirmNewGame()" style="width:100%">جلسة جديدة</button></div></div>';
+      overlay.style.display = ''; overlay.innerHTML = html;
+    }
+
+    async function confirmNewGame() {
+      closeMenu();
+      if (state.callHistory.length > 0 && !(await appConfirm('جلسة جديدة؟ سيتم مسح جميع النتائج'))) return;
+      var keepTeams = state.teamsMode, keepPairs = state.teams, keepNames = state.players.slice();
+      state = defaultState();
+      state.players = keepNames;
+      state.teamsMode = keepTeams;
+      state.teams = keepPairs;
+      draft = null;
+      saveState(); render();
+    }
+
+    // ── Teams mode ──
+    function updateTeamsMenuLabel() {
+      var label = document.getElementById('teamsModeLabel');
+      var editBtn = document.getElementById('editTeamsMenuBtn');
+      if (label) label.textContent = state.teamsMode ? 'إيقاف وضع الفرق' : 'وضع الفرق';
+      if (editBtn) editBtn.style.display = state.teamsMode ? '' : 'none';
+    }
+
+    async function toggleTeamsMode() {
+      if (state.teamsMode) {
+        state.teamsMode = false; state.teams = [];
+        updateTeamsMenuLabel(); saveState(); render();
+        return;
+      }
+      openTeamAssign();
+    }
+
+    var teamAssignState = { picks: [], pairs: [] };
+
+    function openTeamAssign() {
+      teamAssignState = { picks: [], pairs: [] };
+      pushOverlay('teamAssignModal');
+      document.getElementById('teamAssignModal').style.display = 'flex';
+      renderTeamAssign();
+    }
+
+    function closeTeamAssign() {
+      if (history.state && history.state.overlay === 'teamAssignModal') { history.back(); return; }
+      document.getElementById('teamAssignModal').style.display = 'none';
+    }
+
+    function renderTeamAssign() {
+      var chipsEl = document.getElementById('teamAssignChips');
+      var pairsEl = document.getElementById('teamAssignPairs');
+      var btn = document.getElementById('teamAssignConfirmBtn');
+      var paired = {};
+      teamAssignState.pairs.forEach(function(p) { paired[p[0]] = true; paired[p[1]] = true; });
+      var chips = '';
+      state.players.forEach(function(name, i) {
+        var cls = 'player-chip';
+        if (paired[i]) cls += ' paired';
+        else if (teamAssignState.picks.indexOf(i) !== -1) cls += ' selected';
+        chips += '<button class="' + cls + '" onclick="pickTeamPlayer(' + i + ')">' + escHtml(name) + '</button>';
+      });
+      chipsEl.innerHTML = chips;
+      var colors = ['var(--burgundy)', 'var(--navy)'];
+      var ph = '';
+      teamAssignState.pairs.forEach(function(pair, i) {
+        ph += '<div class="pair-preview-row"><span class="pair-dot" style="background:' + colors[i] + '"></span>' +
+          '<span>فريق ' + toAr(i + 1) + ':</span>' +
+          '<span>' + escHtml(state.players[pair[0]]) + ' و' + escHtml(state.players[pair[1]]) + '</span></div>';
+      });
+      pairsEl.innerHTML = ph;
+      btn.disabled = teamAssignState.pairs.length !== 2;
+    }
+
+    function pickTeamPlayer(i) {
+      var picks = teamAssignState.picks;
+      var idx = picks.indexOf(i);
+      if (idx !== -1) { picks.splice(idx, 1); renderTeamAssign(); return; }
+      picks.push(i);
+      if (picks.length === 2) {
+        teamAssignState.pairs.push(picks.slice());
+        teamAssignState.picks = [];
+      }
+      renderTeamAssign();
+    }
+    function resetTeamAssign() { teamAssignState = { picks: [], pairs: [] }; renderTeamAssign(); }
+    function confirmTeamAssign() {
+      if (teamAssignState.pairs.length !== 2) return;
+      state.teamsMode = true;
+      state.teams = teamAssignState.pairs.slice();
+      updateTeamsMenuLabel();
+      closeTeamAssign();
+      saveState(); render(); vibrate(20);
+    }
+
+    // ── Auto-dim ──
+    (function() {
+      var dim = document.getElementById('dimOverlay');
+      var timer = null;
+      function resetDim() {
+        if (timer) clearTimeout(timer);
+        dim.style.display = 'none';
+        timer = setTimeout(function() { dim.style.display = 'block'; }, 15000);
+      }
+      ['click', 'touchstart', 'keydown', 'mousemove'].forEach(function(ev) {
+        document.addEventListener(ev, resetDim, { passive: true });
+      });
+      dim.addEventListener('click', function() { dim.style.display = 'none'; resetDim(); });
+      resetDim();
+    })();
+
+    // ── Service worker ──
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').catch(function() {});
+    }
+
+    // ── Init ──
+    render();
+  </script>
+</body>
+</html>
