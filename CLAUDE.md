@@ -4,9 +4,11 @@ Score tracker for the Levantine/Gulf Trix card game — sibling to baloot/sibeet
 
 ## Stack
 - Single-file PWA (`index.html`)
-- Service Worker (`sw.js`, cache `trix-v1`) for offline caching
+- PeerJS v1.5.4 for P2P multiplayer (star topology, host ↔ viewers)
+- Firebase Realtime Database as scaling fallback when PeerJS broker is unavailable
+- QRCode.js for room QR codes
+- Service Worker (`sw.js`, cache `trix-v15`) for offline caching
 - Al Dewaniah visual identity (burgundy #722F37 / gold #C9A227 / navy #1A2744 / cream #F5F0E6, Cairo font)
-- **No P2P/Firebase yet** — v1 is single-device only. Rooms planned for v2.
 
 ## Commands
 ```bash
@@ -89,11 +91,20 @@ Each player chooses one of two paths on their first call:
 - PWA: offline-first, installable
 - Menu links to all 4 sibling calculators
 
-## Not Yet Implemented (v2 scope)
-- P2P rooms via PeerJS
-- Firebase RTDB fallback for scaling viewers
-- Firebase project `trix-calculator-al-dew`
-- Menu links from sibeet/baloot/konkan to trix (added on deploy)
+## Multiplayer (Rooms)
+- **PeerJS mode** (default): host generates 4-digit code, viewers scan QR or enter code; star-topology, ~8 viewer soft cap
+- **Firebase mode** (auto-fallback): on PeerJS broker error, app silently switches to Firebase RTDB with `F-XXXX` code prefix, removing viewer cap
+- **Viewers are strictly read-only** — host's device is the single source of truth. The `body.is-viewer` class hides the call picker and bottom actions (`تراجع` / `جلسة جديدة`) on viewer devices.
+- State sync via `getStatePayload()` covering all trix-specific fields: `callHistory`, `playerCalls`, `playerPath`, `currentCaller`, `teamsMode`, `teams`, `totals`, `players`
+- `broadcastState()` wired into every host-side mutation
+- Firebase gotcha: trailing empty arrays get dropped on serialization, so `applyStatePayload` pads `playerCalls` and `playerPath` back to player count
+- **Auto-join** from `?room=XXXX` URL parameter
+- PeerJS ID prefix: `tr1-` (trix v1)
+- Firebase namespace: `trix_rooms/` (so trix and konkan rooms never collide)
+
+### Firebase Project
+- **Currently**: sharing `konkan-calculator-al-dew` temporarily (rooms namespaced to prevent collision)
+- **Planned**: move to dedicated `trix-calculator-al-dew` once created in the Firebase console (for isolated 100-concurrent quota)
 
 ## Repos
 - **trix-calculator**: https://github.com/ealhamed/trix-calculator
