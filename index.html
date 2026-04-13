@@ -82,16 +82,20 @@
     .menu-section { margin-bottom: 20px; }
     .menu-section-title { font-size: 12px; font-weight: 700; color: var(--gold-text); margin-bottom: 8px; opacity: 0.7; }
     .menu-item {
-      display: flex; justify-content: space-between; align-items: center; width: 100%;
-      padding: 12px 14px; background: white; border: 1px solid rgba(26,39,68,0.08);
-      border-radius: 12px; font-family: 'Cairo', sans-serif; font-size: 14px; font-weight: 700;
-      color: var(--navy); cursor: pointer; margin-bottom: 6px; text-decoration: none;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 0; border-bottom: 1px solid rgba(26,39,68,0.06);
+      cursor: pointer; font-family: 'Cairo', sans-serif; font-size: 15px;
+      font-weight: 600; color: var(--navy);
+      background: none; border-top: 0; border-left: 0; border-right: 0;
+      border-radius: 0; width: 100%; text-align: right;
+      text-decoration: none;
     }
+    .menu-item:active { opacity: 0.6; }
     .menu-item:disabled { opacity: 0.5; cursor: default; }
-    .menu-item svg { width: 16px; height: 16px; opacity: 0.6; }
+    .menu-item svg { width: 18px; height: 18px; opacity: 0.6; }
     .menu-footer { font-size: 11px; color: var(--navy); opacity: 0.4; text-align: center; margin-top: 30px; }
     [data-theme="dark"] .side-menu { background: #151A26; }
-    [data-theme="dark"] .menu-item { background: rgba(245,240,230,0.06); border-color: rgba(245,240,230,0.1); color: var(--cream); }
+    [data-theme="dark"] .menu-item { background: none; border-bottom-color: rgba(245,240,230,0.08); color: var(--cream); }
     [data-theme="dark"] .menu-title { color: var(--gold); }
 
     /* Progress pill */
