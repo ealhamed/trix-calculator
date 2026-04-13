@@ -421,12 +421,66 @@
     }
 
     @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+    @keyframes spin { to { transform: rotate(360deg); } }
     .contract-form, .call-picker, .scoreboard { animation: fadeIn 0.2s ease; }
+
+    /* Viewer mode: hide interactive surfaces */
+    body.is-viewer #callArea,
+    body.is-viewer .bottom-actions { display: none !important; }
 
     .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
   </style>
 </head>
 <body>
+
+  <!-- Room Status Bar -->
+  <div id="roomStatus" style="display:none;background:var(--navy);padding:6px 12px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:6px">
+      <span id="roomStatusText" style="font-size:11px;color:var(--cream);font-weight:600"></span>
+      <div style="display:flex;gap:4px;align-items:center">
+        <button style="font-size:11px;padding:8px 12px;min-height:36px;background:var(--burgundy);color:var(--cream);border:none;border-radius:10px;font-family:'Cairo',sans-serif;font-weight:700;cursor:pointer" onclick="shareRoom()">مشاركة</button>
+        <button style="font-size:11px;padding:8px 12px;min-height:36px;background:transparent;border:1px solid rgba(245,240,230,0.3);color:var(--cream);border-radius:10px;font-family:'Cairo',sans-serif;font-weight:700;cursor:pointer" onclick="leaveRoom()">خروج</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Room Modal -->
+  <div class="modal-overlay-full" id="roomModal">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <div class="modal-title" id="roomModalTitle">غرفة جديدة</div>
+        <button class="modal-close" onclick="closeRoomModal()" aria-label="إغلاق">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div id="roomCreateView">
+        <div style="text-align:center;padding:8px 0">
+          <div style="font-size:13px;color:var(--navy);opacity:0.5;margin-bottom:4px">رمز الغرفة</div>
+          <div style="font-size:44px;font-weight:800;color:var(--navy);letter-spacing:10px" id="roomCodeDisplay"></div>
+          <div id="qrBox" style="margin:12px auto;width:160px;height:160px"></div>
+          <div style="text-align:center;font-size:13px;color:var(--navy);opacity:0.6;margin-bottom:8px" id="connectedCount"></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <button class="btn-primary" style="flex:1;font-size:14px;padding:10px;max-width:none" onclick="doShareNative()">مشاركة الرابط</button>
+          <button class="btn-secondary" style="flex:1;font-size:14px;padding:10px;opacity:1" onclick="copyRoomLink()">نسخ الرابط</button>
+        </div>
+        <div id="copyMsg" style="font-size:12px;color:var(--burgundy);text-align:center;margin-bottom:8px;opacity:0;transition:opacity 0.3s"></div>
+      </div>
+      <div id="roomJoinView" style="display:none">
+        <div style="text-align:center;font-size:13px;color:var(--navy);opacity:0.5;margin-bottom:12px">أدخل الرمز من المعزّب</div>
+        <div id="joinSpinner" style="display:none;text-align:center;padding:16px 0">
+          <div style="width:32px;height:32px;border:3px solid rgba(26,39,68,0.15);border-top-color:var(--burgundy);border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto"></div>
+          <div style="font-size:12px;color:var(--navy);opacity:0.5;margin-top:8px">جاري الاتصال...</div>
+        </div>
+        <div style="margin-bottom:16px">
+          <label style="display:block;color:var(--gold-text);font-size:14px;font-weight:700;margin-bottom:6px">رمز الغرفة</label>
+          <input type="text" id="joinCodeInput" maxlength="6" style="width:100%;padding:10px 12px;border:1px solid rgba(26,39,68,0.2);border-radius:14px;font-family:'Cairo',sans-serif;font-size:18px;font-weight:700;text-align:center;background:white;color:var(--navy);outline:none;text-transform:uppercase;letter-spacing:8px" placeholder="----" inputmode="text">
+        </div>
+        <button class="btn-primary" style="width:100%;max-width:none" onclick="doJoinRoom()">انضم</button>
+        <div style="color:var(--burgundy);text-align:center;margin-top:8px;font-size:13px" id="joinError"></div>
+      </div>
+    </div>
+  </div>
 
   <!-- Menu overlay + side menu -->
   <div class="menu-overlay" id="menuOverlay" onclick="closeMenu()"></div>
@@ -443,6 +497,11 @@
       <a class="menu-item" href="https://ealhamed.github.io/sibeet-calculator/"><span>بنت السبيت</span></a>
       <a class="menu-item" href="https://ealhamed.github.io/konkan-calculator/"><span>كنكان</span></a>
       <button class="menu-item" disabled><span>تركس</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></button>
+    </div>
+    <div class="menu-section">
+      <div class="menu-section-title">الغرفة</div>
+      <button class="menu-item" onclick="closeMenu();createRoom()"><span>غرفة جديدة</span></button>
+      <button class="menu-item" onclick="closeMenu();joinRoom()"><span>انضم لغرفة</span></button>
     </div>
     <div class="menu-section">
       <div class="menu-section-title">الإعدادات</div>
@@ -514,6 +573,27 @@
 
   <div id="gameOverOverlay" style="display:none"></div>
 
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js" integrity="sha384-nlUQ8ZqCbvStErob+biJNzSgltf6urV3VGqhfIfzhmg9RXmpeRm76ELw0pYnKlTR" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" integrity="sha384-3zSEDfvllQohrq0PHL1fOXJuC/jSOO34H46t6UQfobFOmxE5BpjjaIJY5F2/bMnU" crossorigin="anonymous"></script>
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+    import { getDatabase, ref, set, onValue, remove, onDisconnect, push, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+    // TEMPORARY: using konkan's Firebase project until trix-calculator-al-dew is created.
+    // Room codes are namespaced (trix uses tr1- prefix for PeerJS), so trix and konkan
+    // rooms won't collide under the shared Firebase project.
+    const firebaseConfig = {
+      apiKey: "AIzaSyCfE7scp0-hPVlhpSPdzQn7_0s9l1W4aBY",
+      authDomain: "konkan-calculator-al-dew.firebaseapp.com",
+      databaseURL: "https://konkan-calculator-al-dew-default-rtdb.firebaseio.com",
+      projectId: "konkan-calculator-al-dew",
+      storageBucket: "konkan-calculator-al-dew.firebasestorage.app",
+      messagingSenderId: "767640240899",
+      appId: "1:767640240899:web:18a284f3f5c9ca34a01f36"
+    };
+    const fbApp = initializeApp(firebaseConfig);
+    const fbDb = getDatabase(fbApp);
+    window.FB = { db: fbDb, ref, set, onValue, remove, onDisconnect, push, serverTimestamp };
+  </script>
   <script>
     // ── Constants ──
     var CONTRACTS = {
@@ -616,6 +696,8 @@
         document.getElementById('sideMenu').classList.remove('open');
         return;
       }
+      var roomModal = document.getElementById('roomModal');
+      if (roomModal && roomModal.style.display === 'flex') { roomModal.style.display = 'none'; return; }
       var teamModal = document.getElementById('teamAssignModal');
       if (teamModal && teamModal.style.display === 'flex') { teamModal.style.display = 'none'; return; }
       var dlg = document.querySelector('.app-dialog-overlay');
@@ -780,14 +862,14 @@
 
     async function renamePlayer(i) {
       var n = await appPrompt('اسم اللاعب:', state.players[i]);
-      if (n) { state.players[i] = n; saveState(); render(); }
+      if (n) { state.players[i] = n; saveState(); render(); broadcastState(); }
     }
 
     function selectCaller(i) {
       if (playerDone(i)) return;
       state.currentCaller = i;
       draft = null;
-      saveState(); render();
+      saveState(); render(); broadcastState();
     }
 
     function renderCallArea() {
@@ -1206,7 +1288,7 @@
       state.callHistory.push({ caller: caller, contract: contract, scores: scores, draft: draft });
       draft = null;
       advanceCaller();
-      saveState(); vibrate(20); render();
+      saveState(); vibrate(20); render(); broadcastState();
     }
 
     async function undoLastCall() {
@@ -1226,7 +1308,7 @@
       for (var i = 0; i < 4; i++) state.totals[i] -= last.scores[i];
       state.currentCaller = caller;
       draft = null;
-      saveState(); vibrate([10, 30, 10]); render();
+      saveState(); vibrate([10, 30, 10]); render(); broadcastState();
     }
 
     // ── History ──
@@ -1288,7 +1370,7 @@
       state.teamsMode = keepTeams;
       state.teams = keepPairs;
       draft = null;
-      saveState(); render();
+      saveState(); render(); broadcastState();
     }
 
     // ── Teams mode ──
@@ -1302,7 +1384,7 @@
     async function toggleTeamsMode() {
       if (state.teamsMode) {
         state.teamsMode = false; state.teams = [];
-        updateTeamsMenuLabel(); saveState(); render();
+        updateTeamsMenuLabel(); saveState(); render(); broadcastState();
         return;
       }
       openTeamAssign();
@@ -1365,7 +1447,7 @@
       state.teams = teamAssignState.pairs.slice();
       updateTeamsMenuLabel();
       closeTeamAssign();
-      saveState(); render(); vibrate(20);
+      saveState(); render(); vibrate(20); broadcastState();
     }
 
     // ── Auto-dim ──
@@ -1382,6 +1464,321 @@
       });
       dim.addEventListener('click', function() { dim.style.display = 'none'; resetDim(); });
       resetDim();
+    })();
+
+    // ── State sync payload ──
+    function getStatePayload() {
+      return {
+        players: state.players,
+        totals: state.totals,
+        callHistory: state.callHistory,
+        playerCalls: state.playerCalls,
+        playerPath: state.playerPath,
+        currentCaller: state.currentCaller,
+        teamsMode: state.teamsMode,
+        teams: state.teams
+      };
+    }
+
+    function applyStatePayload(payload) {
+      state.players = payload.players || state.players;
+      state.totals = payload.totals || state.totals;
+      state.callHistory = payload.callHistory || [];
+      // Firebase drops trailing empty arrays/nulls during JSON serialization,
+      // so [["trix"], [], [], []] becomes [["trix"]]. Pad back to player count.
+      var n = state.players.length;
+      var rawCalls = payload.playerCalls || [];
+      state.playerCalls = [];
+      for (var i = 0; i < n; i++) {
+        state.playerCalls.push(Array.isArray(rawCalls[i]) ? rawCalls[i] : []);
+      }
+      var rawPath = payload.playerPath || [];
+      state.playerPath = [];
+      for (var j = 0; j < n; j++) {
+        state.playerPath.push(rawPath[j] === undefined ? null : rawPath[j]);
+      }
+      state.currentCaller = typeof payload.currentCaller === 'number' ? payload.currentCaller : 0;
+      state.teamsMode = !!payload.teamsMode;
+      state.teams = Array.isArray(payload.teams) ? payload.teams : [];
+      draft = null;
+      saveState();
+    }
+
+    // ── Room Manager (P2P + Firebase fallback) ──
+    var PEER_PREFIX = 'tr1-';
+    var peer = null, connections = [], hostConn = null, isHost = false, roomCode = '';
+    var roomMode = 'p2p'; // 'p2p' | 'firebase'
+    var fbUnsubState = null, fbMyId = null;
+    var p2pFallbackAttempted = false;
+
+    function genRoomCode() { return Math.random().toString(36).substring(2, 6).toUpperCase(); }
+
+    function createRoom() {
+      roomMode = 'p2p';
+      return createRoomP2P();
+    }
+
+    function createRoomP2P() {
+      roomCode = genRoomCode();
+      document.getElementById('roomModalTitle').textContent = 'غرفة جديدة';
+      document.getElementById('roomCreateView').style.display = '';
+      document.getElementById('roomJoinView').style.display = 'none';
+      document.getElementById('roomCodeDisplay').textContent = roomCode;
+      var joinUrl = window.location.href.split('?')[0] + '?room=' + roomCode;
+      var qrBox = document.getElementById('qrBox'); qrBox.innerHTML = '';
+      var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      new QRCode(qrBox, { text: joinUrl, width: 160, height: 160, colorDark: isDark ? '#E8E4DC' : '#1A2744', colorLight: isDark ? '#1A1A2E' : '#F5F0E6', correctLevel: QRCode.CorrectLevel.M });
+      document.getElementById('connectedCount').textContent = 'جاري الاتصال...';
+      pushOverlay('roomModal');
+      document.getElementById('roomModal').style.display = 'flex';
+      isHost = true; connections = [];
+
+      peer = new Peer(PEER_PREFIX + roomCode.toLowerCase(), { config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] } });
+      peer.on('open', function() {
+        document.getElementById('connectedCount').textContent = 'جاهز • ٠ متصلين';
+        showRoomStatus('غرفة ' + roomCode + ' • معزّب • ٠ متصلين');
+      });
+      peer.on('connection', function(conn) {
+        connections.push(conn);
+        updateConnCount();
+        conn.on('close', function() {
+          connections = connections.filter(function(c) { return c !== conn; });
+          updateConnCount();
+        });
+        conn.on('open', function() {
+          conn.send({ type: 'state_sync', payload: getStatePayload() });
+        });
+      });
+      peer.on('error', function(err) {
+        console.error('Peer error:', err);
+        if (!p2pFallbackAttempted && (String(err).indexOf('server') !== -1 || String(err.type).indexOf('server') !== -1 || err.type === 'network' || err.type === 'socket-error' || err.type === 'unavailable-id')) {
+          p2pFallbackAttempted = true;
+          document.getElementById('connectedCount').textContent = 'يتم التحويل إلى الغرفة الكبيرة...';
+          if (peer) { try { peer.destroy(); } catch (e) {} peer = null; }
+          connections = []; isHost = false;
+          setTimeout(function() { roomMode = 'firebase'; createRoomFirebase(); }, 500);
+          return;
+        }
+        document.getElementById('connectedCount').textContent = 'لم يتم الاتصال، تأكد من الإنترنت';
+      });
+    }
+
+    function joinRoom() {
+      document.getElementById('roomModalTitle').textContent = 'انضم لغرفة';
+      document.getElementById('roomCreateView').style.display = 'none';
+      document.getElementById('roomJoinView').style.display = '';
+      document.getElementById('joinCodeInput').value = '';
+      document.getElementById('joinError').textContent = '';
+      pushOverlay('roomModal');
+      document.getElementById('roomModal').style.display = 'flex';
+    }
+
+    function doJoinRoom() {
+      var code = document.getElementById('joinCodeInput').value.trim().toUpperCase();
+      if (!code) { document.getElementById('joinError').textContent = 'أدخل رمز الغرفة'; return; }
+      if (code.charAt(0) === 'F' && code.charAt(1) === '-') {
+        return doJoinRoomFirebase(code.substring(2));
+      }
+      if (code.length !== 4) { document.getElementById('joinError').textContent = 'أدخل رمز من ٤ أحرف'; return; }
+      document.getElementById('joinError').textContent = '';
+      document.getElementById('joinSpinner').style.display = '';
+      isHost = false; roomCode = code;
+
+      peer = new Peer(undefined, { config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] } });
+      peer.on('open', function() {
+        hostConn = peer.connect(PEER_PREFIX + code.toLowerCase());
+        hostConn.on('open', function() {
+          document.getElementById('joinSpinner').style.display = 'none';
+          closeRoomModal();
+          showRoomStatus('غرفة ' + code + ' • متصل');
+          document.body.classList.add('is-viewer');
+        });
+        hostConn.on('data', function(msg) {
+          if (msg.type === 'state_sync') { applyStatePayload(msg.payload); render(); }
+        });
+        hostConn.on('close', function() { showRoomStatus('انقطع الاتصال'); hostConn = null; });
+        setTimeout(function() {
+          if (!hostConn || !hostConn.open) {
+            document.getElementById('joinSpinner').style.display = 'none';
+            document.getElementById('joinError').textContent = 'لم يتم العثور على الغرفة، تأكد من الرمز والإنترنت';
+            if (peer) peer.destroy();
+          }
+        }, 10000);
+      });
+      peer.on('error', function(err) {
+        console.error('Peer join error:', err);
+        if (!p2pFallbackAttempted && (String(err).indexOf('server') !== -1 || err.type === 'network' || err.type === 'socket-error')) {
+          p2pFallbackAttempted = true;
+          document.getElementById('joinError').textContent = 'جاري المحاولة عبر Firebase...';
+          setTimeout(function() { roomMode = 'firebase'; doJoinRoomFirebase(code); }, 500);
+        }
+      });
+    }
+
+    function closeRoomModal() {
+      if (history.state && history.state.overlay === 'roomModal') { history.back(); return; }
+      document.getElementById('roomModal').style.display = 'none';
+    }
+
+    function getJoinUrl() {
+      var prefix = (roomMode === 'firebase') ? 'F-' : '';
+      return window.location.href.split('?')[0] + '?room=' + prefix + roomCode;
+    }
+
+    function copyRoomLink() {
+      navigator.clipboard.writeText(getJoinUrl()).then(function() {
+        var msg = document.getElementById('copyMsg');
+        msg.textContent = 'تم نسخ الرابط!'; msg.style.opacity = '1';
+        setTimeout(function() { msg.style.opacity = '0'; }, 1500);
+      });
+    }
+
+    function doShareNative() {
+      var joinUrl = getJoinUrl();
+      if (navigator.share) {
+        navigator.share({ title: 'تركس - الديوانية', text: 'تعال انضم للغرفة! الرمز: ' + (roomMode === 'firebase' ? 'F-' : '') + roomCode, url: joinUrl }).catch(function() { copyRoomLink(); });
+      } else { copyRoomLink(); }
+    }
+
+    function shareRoom() {
+      document.getElementById('roomModalTitle').textContent = 'مشاركة الغرفة';
+      document.getElementById('roomCreateView').style.display = '';
+      document.getElementById('roomJoinView').style.display = 'none';
+      document.getElementById('roomCodeDisplay').textContent = (roomMode === 'firebase' ? 'F-' : '') + roomCode;
+      var joinUrl = getJoinUrl();
+      var qrBox = document.getElementById('qrBox'); qrBox.innerHTML = '';
+      var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      new QRCode(qrBox, { text: joinUrl, width: 160, height: 160, colorDark: isDark ? '#E8E4DC' : '#1A2744', colorLight: isDark ? '#1A1A2E' : '#F5F0E6', correctLevel: QRCode.CorrectLevel.M });
+      var count = connections.filter(function(c) { return c.open; }).length;
+      document.getElementById('connectedCount').textContent = toAr(count) + ' متصلين';
+      pushOverlay('roomModal');
+      document.getElementById('roomModal').style.display = 'flex';
+    }
+
+    function updateConnCount() {
+      var count = connections.filter(function(c) { return c.open; }).length;
+      document.getElementById('connectedCount').textContent = toAr(count) + ' متصلين';
+      showRoomStatus('غرفة ' + roomCode + ' • معزّب • ' + toAr(count) + ' متصلين');
+    }
+
+    function showRoomStatus(text) {
+      document.getElementById('roomStatus').style.display = '';
+      document.getElementById('roomStatusText').textContent = text;
+    }
+
+    function leaveRoom() {
+      if (peer) { try { peer.destroy(); } catch (e) {} peer = null; }
+      if (fbUnsubState) { try { fbUnsubState(); } catch(e) {} fbUnsubState = null; }
+      if (window.FB && roomCode && roomMode === 'firebase' && isHost) {
+        window.FB.remove(window.FB.ref(window.FB.db, 'trix_rooms/' + roomCode)).catch(function() {});
+      }
+      connections = []; hostConn = null; isHost = false; roomCode = ''; fbMyId = null;
+      p2pFallbackAttempted = false; roomMode = 'p2p';
+      document.getElementById('roomStatus').style.display = 'none';
+      document.body.classList.remove('is-viewer');
+      render();
+    }
+
+    // ── Firebase room implementation ──
+    function createRoomFirebase() {
+      if (!window.FB) { alert('Firebase غير متوفر'); return; }
+      roomCode = genRoomCode();
+      isHost = true;
+      document.getElementById('roomModalTitle').textContent = 'غرفة جديدة';
+      document.getElementById('roomCreateView').style.display = '';
+      document.getElementById('roomJoinView').style.display = 'none';
+      document.getElementById('roomCodeDisplay').textContent = 'F-' + roomCode;
+      var joinUrl = window.location.href.split('?')[0] + '?room=F-' + roomCode;
+      var qrBox = document.getElementById('qrBox'); qrBox.innerHTML = '';
+      var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      new QRCode(qrBox, { text: joinUrl, width: 160, height: 160, colorDark: isDark ? '#E8E4DC' : '#1A2744', colorLight: isDark ? '#1A1A2E' : '#F5F0E6', correctLevel: QRCode.CorrectLevel.M });
+      pushOverlay('roomModal');
+      document.getElementById('roomModal').style.display = 'flex';
+
+      var FB = window.FB;
+      // Use 'trix_rooms' namespace so konkan/trix rooms don't collide under the shared Firebase project.
+      var roomRef = FB.ref(FB.db, 'trix_rooms/' + roomCode);
+      FB.set(roomRef, {
+        host: true, createdAt: FB.serverTimestamp(),
+        state: getStatePayload(),
+        presence: {}
+      }).then(function() {
+        FB.onDisconnect(roomRef).remove();
+        fbUnsubState = FB.onValue(FB.ref(FB.db, 'trix_rooms/' + roomCode + '/presence'), function(snap) {
+          var presence = snap.val() || {};
+          var count = Object.keys(presence).length;
+          document.getElementById('connectedCount').textContent = toAr(count) + ' متصلين';
+          showRoomStatus('غرفة F-' + roomCode + ' • معزّب • ' + toAr(count) + ' متصلين');
+        });
+        showRoomStatus('غرفة F-' + roomCode + ' • معزّب • ٠ متصلين');
+      }).catch(function(err) {
+        console.error(err);
+        document.getElementById('connectedCount').textContent = 'فشل الاتصال بـ Firebase';
+      });
+    }
+
+    function doJoinRoomFirebase(code) {
+      if (!window.FB) { document.getElementById('joinError').textContent = 'Firebase غير متوفر'; return; }
+      document.getElementById('joinError').textContent = '';
+      document.getElementById('joinSpinner').style.display = '';
+      isHost = false; roomCode = code; roomMode = 'firebase';
+      var FB = window.FB;
+      var roomRef = FB.ref(FB.db, 'trix_rooms/' + code);
+
+      FB.onValue(roomRef, function(snap) {
+        var data = snap.val();
+        if (!data) {
+          document.getElementById('joinSpinner').style.display = 'none';
+          document.getElementById('joinError').textContent = 'الغرفة غير موجودة';
+          return;
+        }
+        if (!fbMyId) {
+          fbMyId = Math.random().toString(36).substring(2, 10);
+          var presRef = FB.ref(FB.db, 'trix_rooms/' + code + '/presence/' + fbMyId);
+          FB.set(presRef, { joinedAt: FB.serverTimestamp() });
+          FB.onDisconnect(presRef).remove();
+          document.getElementById('joinSpinner').style.display = 'none';
+          closeRoomModal();
+          showRoomStatus('غرفة F-' + code + ' • متصل');
+          document.body.classList.add('is-viewer');
+        }
+        if (data.state) { applyStatePayload(data.state); render(); }
+      }, function(err) {
+        console.error(err);
+        document.getElementById('joinSpinner').style.display = 'none';
+        document.getElementById('joinError').textContent = 'فشل الاتصال بـ Firebase';
+      });
+      fbUnsubState = function() { /* noop */ };
+    }
+
+    function broadcastState() {
+      if (!isHost) return;
+      if (roomMode === 'firebase' && window.FB && roomCode) {
+        var FB = window.FB;
+        FB.set(FB.ref(FB.db, 'trix_rooms/' + roomCode + '/state'), getStatePayload()).catch(function() {});
+        return;
+      }
+      if (connections.length === 0) return;
+      var payload = { type: 'state_sync', payload: getStatePayload() };
+      connections.forEach(function(c) { if (c.open) c.send(payload); });
+    }
+
+    // Auto-join from URL
+    (function() {
+      var params = new URLSearchParams(window.location.search);
+      var roomParam = params.get('room');
+      if (roomParam) {
+        var isFB = roomParam.charAt(0) === 'F' && roomParam.charAt(1) === '-';
+        var validLen = isFB ? (roomParam.length === 6) : (roomParam.length === 4);
+        if (validLen) {
+          window.history.replaceState({}, '', window.location.pathname);
+          setTimeout(function() {
+            joinRoom();
+            document.getElementById('joinCodeInput').value = roomParam.toUpperCase();
+            doJoinRoom();
+          }, 500);
+        }
+      }
     })();
 
     // ── Service worker ──
