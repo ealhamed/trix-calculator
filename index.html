@@ -207,18 +207,24 @@
       background: rgba(26,39,68,0.04); border-radius: 10px; padding: 8px 10px;
       margin-bottom: 5px;
       display: grid;
-      grid-template-columns: 28px 1fr 30px;
+      grid-template-columns: 42px 1fr 36px;
       column-gap: 8px;
-      row-gap: 5px;
+      row-gap: 6px;
       align-items: center;
     }
     [data-theme="dark"] .card-slot { background: rgba(245,240,230,0.04); }
-    .card-slot .lead { display: flex; align-items: center; gap: 4px; justify-self: start; }
-    .card-slot .chips { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+    .card-slot .lead {
+      display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+      justify-self: start; min-width: 0;
+    }
+    .card-slot .chips {
+      display: flex; gap: 4px; flex-wrap: wrap; align-items: center;
+      min-width: 0;
+    }
     .card-slot .trail { justify-self: end; }
     .card-slot .row-label {
-      font-size: 10px; font-weight: 700; color: var(--navy); opacity: 0.6;
-      justify-self: start;
+      font-size: 11px; font-weight: 800; color: var(--navy); opacity: 0.7;
+      justify-self: start; align-self: center;
     }
     [data-theme="dark"] .card-slot .row-label { color: var(--cream); }
     .card-symbol { font-size: 20px; font-weight: 900; text-align: center; }
@@ -234,15 +240,16 @@
     .double-toggle.active { background: var(--gold); color: var(--navy); }
     .picker-chip {
       background: white; border: 1.5px solid rgba(26,39,68,0.15); border-radius: 999px;
-      padding: 4px 9px; font-family: 'Cairo', sans-serif; font-size: 11px; font-weight: 700;
-      color: var(--navy); cursor: pointer; min-height: 28px;
+      padding: 4px 8px; font-family: 'Cairo', sans-serif; font-size: 11px; font-weight: 700;
+      color: var(--navy); cursor: pointer; min-height: 28px; white-space: nowrap;
     }
     .picker-chip.active { background: var(--burgundy); color: var(--cream); border-color: var(--burgundy); }
     .picker-chip.pos.active { background: #2E7D32; border-color: #2E7D32; color: white; }
     [data-theme="dark"] .picker-chip { background: rgba(245,240,230,0.06); color: var(--cream); border-color: rgba(245,240,230,0.12); }
     .val-chip {
-      font-size: 10px; font-weight: 800; color: var(--gold-text);
-      background: rgba(201,162,39,0.15); padding: 2px 7px; border-radius: 999px; flex-shrink: 0;
+      font-size: 9px; font-weight: 800; color: var(--gold-text);
+      background: rgba(201,162,39,0.15); padding: 1px 5px; border-radius: 999px;
+      flex-shrink: 0; white-space: nowrap;
     }
     .subline { font-size: 10px; opacity: 0.55; margin-top: 3px; }
 
