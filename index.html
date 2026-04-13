@@ -198,28 +198,36 @@
     .sum-hint.ok { color: #2E7D32; }
     .sum-hint.bad { color: var(--burgundy); }
 
-    /* Compact card slot (queens / king) */
+    /* Compact card slot (queens / king) — grid layout so rows align */
     .card-slot {
-      background: rgba(26,39,68,0.04); border-radius: 10px; padding: 6px 8px;
+      background: rgba(26,39,68,0.04); border-radius: 10px; padding: 8px 10px;
       margin-bottom: 5px;
+      display: grid;
+      grid-template-columns: 28px 1fr 30px;
+      column-gap: 8px;
+      row-gap: 5px;
+      align-items: center;
     }
     [data-theme="dark"] .card-slot { background: rgba(245,240,230,0.04); }
-    .card-row { display: flex; align-items: center; gap: 6px; }
-    .card-symbol { font-size: 20px; font-weight: 900; width: 22px; text-align: center; flex-shrink: 0; }
+    .card-slot .lead { display: flex; align-items: center; gap: 4px; justify-self: start; }
+    .card-slot .chips { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+    .card-slot .trail { justify-self: end; }
+    .card-slot .row-label {
+      font-size: 10px; font-weight: 700; color: var(--navy); opacity: 0.6;
+      justify-self: start;
+    }
+    [data-theme="dark"] .card-slot .row-label { color: var(--cream); }
+    .card-symbol { font-size: 20px; font-weight: 900; text-align: center; }
     .card-symbol.red { color: #C62828; }
     .card-symbol.black { color: var(--navy); }
     [data-theme="dark"] .card-symbol.black { color: var(--cream); }
-    .card-slot .pickers-inline { display: flex; gap: 3px; flex: 1; justify-content: flex-end; flex-wrap: wrap; }
     .double-toggle {
       background: rgba(201,162,39,0.15); border: 1.5px solid var(--gold);
-      color: var(--gold-text); border-radius: 999px; padding: 3px 9px;
+      color: var(--gold-text); border-radius: 999px; padding: 3px 8px;
       font-family: 'Cairo', sans-serif; font-size: 10px; font-weight: 800; cursor: pointer;
       flex-shrink: 0;
     }
     .double-toggle.active { background: var(--gold); color: var(--navy); }
-    .picker-row { display: flex; gap: 3px; margin-top: 5px; flex-wrap: wrap; align-items: center; }
-    .picker-label { font-size: 10px; font-weight: 700; color: var(--navy); opacity: 0.7; min-width: 40px; }
-    [data-theme="dark"] .picker-label { color: var(--cream); }
     .picker-chip {
       background: white; border: 1.5px solid rgba(26,39,68,0.15); border-radius: 999px;
       padding: 4px 9px; font-family: 'Cairo', sans-serif; font-size: 11px; font-weight: 700;
@@ -906,29 +914,25 @@
     function renderDoubleableCard(q, qi, prefix) {
       var isComplexDiamondQueen = prefix === 'complex-queens' && q.suit === 'diamonds';
       var slotStyle = isComplexDiamondQueen ? ' style="border:1.5px solid var(--gold);background:rgba(201,162,39,0.06)"' : '';
-      var valChip = '';
-      if (isComplexDiamondQueen) {
-        valChip = '<span class="val-chip">' + (q.doubled ? '-٦٠' : '-٣٥') + '</span>';
-      }
+      var valLabel = isComplexDiamondQueen ? '<span class="val-chip">' + (q.doubled ? '-٦٠' : '-٣٥') + '</span>' : '';
+      // Row 1: suit + chips + ×٢ toggle
       var h = '<div class="card-slot"' + slotStyle + '>' +
-        '<div class="card-row">' +
-          '<span class="card-symbol ' + (q.red ? 'red' : 'black') + '">' + q.symbol + '</span>' +
-          valChip +
-          '<div class="pickers-inline">';
+        '<div class="lead"><span class="card-symbol ' + (q.red ? 'red' : 'black') + '">' + q.symbol + '</span>' + valLabel + '</div>' +
+        '<div class="chips">';
       for (var p = 0; p < 4; p++) {
         var active = q.taker === p ? ' active' : '';
         h += '<button class="picker-chip' + active + '" onclick="setTaker(\'' + prefix + '\',' + qi + ',' + p + ')">' + escHtml(state.players[p]) + '</button>';
       }
       h += '</div>' +
-          '<button class="double-toggle' + (q.doubled ? ' active' : '') + '" onclick="toggleDoubled(\'' + prefix + '\',' + qi + ')">×٢</button>' +
-        '</div>';
+        '<button class="double-toggle trail' + (q.doubled ? ' active' : '') + '" onclick="toggleDoubled(\'' + prefix + '\',' + qi + ')">×٢</button>';
+      // Row 2 (only when doubled): +25 label + chips + blank trail cell
       if (q.doubled) {
-        h += '<div class="picker-row"><div class="picker-label">+٢٥:</div>';
+        h += '<div class="row-label">+٢٥</div><div class="chips">';
         for (var p3 = 0; p3 < 4; p3++) {
           var a3 = q.upPlayer === p3 ? ' active' : '';
           h += '<button class="picker-chip pos' + a3 + '" onclick="setUpPlayer(\'' + prefix + '\',' + qi + ',' + p3 + ')">' + escHtml(state.players[p3]) + '</button>';
         }
-        h += '</div>';
+        h += '</div><div></div>';
       }
       h += '</div>';
       return h;
@@ -937,23 +941,21 @@
     function renderKingSlot(d, prefix) {
       var q = prefix === 'kingHearts' ? d : d.king;
       var h = '<div class="card-slot">' +
-        '<div class="card-row">' +
-          '<span class="card-symbol red">♥K</span>' +
-          '<div class="pickers-inline">';
+        '<div class="lead"><span class="card-symbol red">♥K</span></div>' +
+        '<div class="chips">';
       for (var p = 0; p < 4; p++) {
         var active = q.taker === p ? ' active' : '';
         h += '<button class="picker-chip' + active + '" onclick="setKingTaker(\'' + prefix + '\',' + p + ')">' + escHtml(state.players[p]) + '</button>';
       }
       h += '</div>' +
-          '<button class="double-toggle' + (q.doubled ? ' active' : '') + '" onclick="toggleKingDoubled(\'' + prefix + '\')">×٢</button>' +
-        '</div>';
+        '<button class="double-toggle trail' + (q.doubled ? ' active' : '') + '" onclick="toggleKingDoubled(\'' + prefix + '\')">×٢</button>';
       if (q.doubled) {
-        h += '<div class="picker-row"><div class="picker-label">+٧٥:</div>';
+        h += '<div class="row-label">+٧٥</div><div class="chips">';
         for (var p3 = 0; p3 < 4; p3++) {
           var a3 = q.upPlayer === p3 ? ' active' : '';
           h += '<button class="picker-chip pos' + a3 + '" onclick="setKingUpPlayer(\'' + prefix + '\',' + p3 + ')">' + escHtml(state.players[p3]) + '</button>';
         }
-        h += '</div>';
+        h += '</div><div></div>';
       }
       h += '</div>';
       return h;
