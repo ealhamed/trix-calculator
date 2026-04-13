@@ -875,7 +875,7 @@
       var expected = expectedCallsForPlayer(i);
       var pathLabel = expected === null ? '؟' : toAr(callsCount) + '/' + toAr(expected);
       return '<div class="' + cls + '" onclick="selectCaller(' + i + ')">' +
-        '<div class="player-name" ondblclick="event.stopPropagation();renamePlayer(' + i + ')">' + escHtml(state.players[i]) + '</div>' +
+        '<div class="player-name" onclick="event.stopPropagation();renamePlayer(' + i + ')" style="cursor:pointer">' + escHtml(state.players[i]) + ' <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.4;vertical-align:middle"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="M15 5l4 4"/></svg></div>' +
         '<div class="player-total' + totalCls + '">' + toAr(total) + '</div>' +
         '<div class="player-calls">' + pathLabel + ' ممالك</div>' +
         '</div>';
