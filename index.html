@@ -202,31 +202,31 @@
     .sum-hint.ok { color: #2E7D32; }
     .sum-hint.bad { color: var(--burgundy); }
 
-    /* Compact card slot (queens / king) — grid layout so rows align */
+    /* Compact card slot (queens / king) — 4-col grid so rows align perfectly */
     .card-slot {
       background: rgba(26,39,68,0.04); border-radius: 10px; padding: 8px 10px;
       margin-bottom: 5px;
       display: grid;
-      grid-template-columns: 60px 1fr 36px;
-      column-gap: 8px;
+      grid-template-columns: 24px 36px 1fr 36px;
+      column-gap: 6px;
       row-gap: 6px;
       align-items: center;
     }
     [data-theme="dark"] .card-slot { background: rgba(245,240,230,0.04); }
-    .card-slot .lead {
-      display: flex; flex-direction: row; align-items: center; gap: 4px;
-      justify-self: start; min-width: 0;
+    .card-slot .suit-cell { justify-self: center; }
+    .card-slot .val-cell {
+      justify-self: start; align-self: center;
+      font-size: 10px; font-weight: 800; color: var(--gold-text);
+      background: rgba(201,162,39,0.15);
+      padding: 2px 6px; border-radius: 999px;
+      white-space: nowrap;
     }
+    [data-theme="dark"] .card-slot .val-cell { color: var(--gold); }
     .card-slot .chips {
       display: flex; gap: 4px; flex-wrap: wrap; align-items: center;
       min-width: 0;
     }
     .card-slot .trail { justify-self: end; }
-    .card-slot .row-label {
-      font-size: 11px; font-weight: 800; color: var(--navy); opacity: 0.7;
-      justify-self: start; align-self: center;
-    }
-    [data-theme="dark"] .card-slot .row-label { color: var(--cream); }
     .card-symbol { font-size: 20px; font-weight: 900; text-align: center; }
     .card-symbol.red { color: #C62828; }
     .card-symbol.black { color: var(--navy); }
@@ -925,10 +925,13 @@
     function renderDoubleableCard(q, qi, prefix) {
       var isComplexDiamondQueen = prefix === 'complex-queens' && q.suit === 'diamonds';
       var slotStyle = isComplexDiamondQueen ? ' style="border:1.5px solid var(--gold);background:rgba(201,162,39,0.06)"' : '';
-      var valLabel = isComplexDiamondQueen ? '<span class="val-chip">' + (q.doubled ? '-٦٠' : '-٣٥') + '</span>' : '';
-      // Row 1: suit + chips + ×٢ toggle
+      var row1ValCell = isComplexDiamondQueen
+        ? '<div class="val-cell">' + (q.doubled ? '-٦٠' : '-٣٥') + '</div>'
+        : '<div></div>';
+      // Row 1: [suit] [val | empty] [chips] [×٢ toggle]
       var h = '<div class="card-slot"' + slotStyle + '>' +
-        '<div class="lead"><span class="card-symbol ' + (q.red ? 'red' : 'black') + '">' + q.symbol + '</span>' + valLabel + '</div>' +
+        '<div class="suit-cell"><span class="card-symbol ' + (q.red ? 'red' : 'black') + '">' + q.symbol + '</span></div>' +
+        row1ValCell +
         '<div class="chips">';
       for (var p = 0; p < 4; p++) {
         var active = q.taker === p ? ' active' : '';
@@ -936,9 +939,9 @@
       }
       h += '</div>' +
         '<button class="double-toggle trail' + (q.doubled ? ' active' : '') + '" onclick="toggleDoubled(\'' + prefix + '\',' + qi + ')">×٢</button>';
-      // Row 2 (only when doubled): +25 label + chips + blank trail cell
+      // Row 2 (only when doubled): [empty] [+25 label] [chips] [empty]
       if (q.doubled) {
-        h += '<div class="row-label">+٢٥</div><div class="chips">';
+        h += '<div></div><div class="val-cell">+٢٥</div><div class="chips">';
         for (var p3 = 0; p3 < 4; p3++) {
           var a3 = q.upPlayer === p3 ? ' active' : '';
           h += '<button class="picker-chip pos' + a3 + '" onclick="setUpPlayer(\'' + prefix + '\',' + qi + ',' + p3 + ')">' + escHtml(state.players[p3]) + '</button>';
@@ -952,7 +955,8 @@
     function renderKingSlot(d, prefix) {
       var q = prefix === 'kingHearts' ? d : d.king;
       var h = '<div class="card-slot">' +
-        '<div class="lead"><span class="card-symbol red">♥K</span></div>' +
+        '<div class="suit-cell"><span class="card-symbol red">♥K</span></div>' +
+        '<div></div>' +
         '<div class="chips">';
       for (var p = 0; p < 4; p++) {
         var active = q.taker === p ? ' active' : '';
@@ -961,7 +965,7 @@
       h += '</div>' +
         '<button class="double-toggle trail' + (q.doubled ? ' active' : '') + '" onclick="toggleKingDoubled(\'' + prefix + '\')">×٢</button>';
       if (q.doubled) {
-        h += '<div class="row-label">+٧٥</div><div class="chips">';
+        h += '<div></div><div class="val-cell">+٧٥</div><div class="chips">';
         for (var p3 = 0; p3 < 4; p3++) {
           var a3 = q.upPlayer === p3 ? ' active' : '';
           h += '<button class="picker-chip pos' + a3 + '" onclick="setKingUpPlayer(\'' + prefix + '\',' + p3 + ')">' + escHtml(state.players[p3]) + '</button>';
