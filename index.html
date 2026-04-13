@@ -271,20 +271,26 @@
     .preview-delta.neg { color: var(--burgundy); }
     .preview-delta.pos { color: #2E7D32; }
 
-    /* Buttons */
+    /* Buttons — canonical (see STYLE.md) */
     .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
     .btn-primary {
-      background: var(--burgundy); color: var(--cream); border: none; border-radius: 12px;
-      padding: 12px; font-family: 'Cairo', sans-serif; font-size: 14px; font-weight: 800;
-      cursor: pointer; min-height: 44px;
+      background: var(--burgundy); color: var(--cream); border: none;
+      border-radius: 12px; padding: 12px 24px;
+      font-family: 'Cairo', sans-serif; font-size: 16px; font-weight: 800;
+      cursor: pointer; min-height: 44px; width: 100%; max-width: 220px;
+      box-shadow: 0 4px 12px rgba(114,47,55,0.25);
+      transition: transform 0.15s, box-shadow 0.15s;
     }
-    .btn-primary:disabled { opacity: 0.4; cursor: default; }
+    .btn-row .btn-primary { max-width: none; font-size: 14px; padding: 12px; }
+    .btn-primary:disabled { opacity: 0.4; cursor: default; box-shadow: none; }
+    .btn-primary:active:not(:disabled) { transform: scale(0.97); }
     .btn-secondary {
-      background: rgba(26,39,68,0.06); color: var(--navy); border: 1px solid rgba(26,39,68,0.1);
-      border-radius: 12px; padding: 12px; font-family: 'Cairo', sans-serif;
-      font-size: 14px; font-weight: 700; cursor: pointer; min-height: 44px;
+      background: transparent; color: var(--navy);
+      border: 1px solid rgba(26,39,68,0.2); border-radius: 12px;
+      font-family: 'Cairo', sans-serif; font-size: 13px; font-weight: 700;
+      padding: 10px 20px; min-height: 44px; opacity: 0.7; cursor: pointer;
     }
-    [data-theme="dark"] .btn-secondary { background: rgba(245,240,230,0.06); color: var(--cream); border-color: rgba(245,240,230,0.12); }
+    [data-theme="dark"] .btn-secondary { color: var(--cream); border-color: rgba(245,240,230,0.2); }
 
     /* Bottom actions */
     .bottom-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
