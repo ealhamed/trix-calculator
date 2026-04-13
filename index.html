@@ -817,11 +817,11 @@
       if (contract === 'queens') {
         return {
           contract: 'queens',
-          queens: SUITS.map(function(s) { return { suit: s.key, symbol: s.symbol, red: s.red, taker: null, doubled: false, dnPlayer: null, upPlayer: null }; })
+          queens: SUITS.map(function(s) { return { suit: s.key, symbol: s.symbol, red: s.red, taker: null, doubled: false, upPlayer: null }; })
         };
       }
       if (contract === 'kingHearts') {
-        return { contract: 'kingHearts', taker: null, doubled: false, dnPlayer: null, upPlayer: null };
+        return { contract: 'kingHearts', taker: null, doubled: false, upPlayer: null };
       }
       if (contract === 'trix') {
         return { contract: 'trix', order: [null, null, null, null] };
@@ -831,8 +831,8 @@
           contract: 'complex',
           tricks: [0, 0, 0, 0],
           diamonds: [0, 0, 0, 0],
-          queens: SUITS.map(function(s) { return { suit: s.key, symbol: s.symbol, red: s.red, taker: null, doubled: false, dnPlayer: null, upPlayer: null }; }),
-          king: { taker: null, doubled: false, dnPlayer: null, upPlayer: null }
+          queens: SUITS.map(function(s) { return { suit: s.key, symbol: s.symbol, red: s.red, taker: null, doubled: false, upPlayer: null }; }),
+          king: { taker: null, doubled: false, upPlayer: null }
         };
       }
     }
@@ -923,12 +923,6 @@
           '<button class="double-toggle' + (q.doubled ? ' active' : '') + '" onclick="toggleDoubled(\'' + prefix + '\',' + qi + ')">×٢</button>' +
         '</div>';
       if (q.doubled) {
-        h += '<div class="picker-row"><div class="picker-label">-٥٠:</div>';
-        for (var p2 = 0; p2 < 4; p2++) {
-          var a2 = q.dnPlayer === p2 ? ' active' : '';
-          h += '<button class="picker-chip' + a2 + '" onclick="setDnPlayer(\'' + prefix + '\',' + qi + ',' + p2 + ')">' + escHtml(state.players[p2]) + '</button>';
-        }
-        h += '</div>';
         h += '<div class="picker-row"><div class="picker-label">+٢٥:</div>';
         for (var p3 = 0; p3 < 4; p3++) {
           var a3 = q.upPlayer === p3 ? ' active' : '';
@@ -954,12 +948,6 @@
           '<button class="double-toggle' + (q.doubled ? ' active' : '') + '" onclick="toggleKingDoubled(\'' + prefix + '\')">×٢</button>' +
         '</div>';
       if (q.doubled) {
-        h += '<div class="picker-row"><div class="picker-label">-١٥٠:</div>';
-        for (var p2 = 0; p2 < 4; p2++) {
-          var a2 = q.dnPlayer === p2 ? ' active' : '';
-          h += '<button class="picker-chip' + a2 + '" onclick="setKingDnPlayer(\'' + prefix + '\',' + p2 + ')">' + escHtml(state.players[p2]) + '</button>';
-        }
-        h += '</div>';
         h += '<div class="picker-row"><div class="picker-label">+٧٥:</div>';
         for (var p3 = 0; p3 < 4; p3++) {
           var a3 = q.upPlayer === p3 ? ' active' : '';
@@ -1077,37 +1065,29 @@
       draft[key][i] = newVal; render();
     }
     function toggleDoubled(prefix, qi) {
-      var q = prefix === 'queens' ? draft.queens[qi] : draft.queens[qi];
+      var q = draft.queens[qi];
       q.doubled = !q.doubled;
-      if (!q.doubled) { q.dnPlayer = null; q.upPlayer = null; }
+      if (!q.doubled) q.upPlayer = null;
       render();
     }
     function setTaker(prefix, qi, p) {
-      var q = prefix === 'queens' ? draft.queens[qi] : draft.queens[qi];
+      var q = draft.queens[qi];
       q.taker = q.taker === p ? null : p;
       render();
     }
-    function setDnPlayer(prefix, qi, p) {
-      var q = prefix === 'queens' ? draft.queens[qi] : draft.queens[qi];
-      q.dnPlayer = q.dnPlayer === p ? null : p; render();
-    }
     function setUpPlayer(prefix, qi, p) {
-      var q = prefix === 'queens' ? draft.queens[qi] : draft.queens[qi];
+      var q = draft.queens[qi];
       q.upPlayer = q.upPlayer === p ? null : p; render();
     }
     function toggleKingDoubled(prefix) {
       var k = prefix === 'kingHearts' ? draft : draft.king;
       k.doubled = !k.doubled;
-      if (!k.doubled) { k.dnPlayer = null; k.upPlayer = null; }
+      if (!k.doubled) k.upPlayer = null;
       render();
     }
     function setKingTaker(prefix, p) {
       var k = prefix === 'kingHearts' ? draft : draft.king;
       k.taker = k.taker === p ? null : p; render();
-    }
-    function setKingDnPlayer(prefix, p) {
-      var k = prefix === 'kingHearts' ? draft : draft.king;
-      k.dnPlayer = k.dnPlayer === p ? null : p; render();
     }
     function setKingUpPlayer(prefix, p) {
       var k = prefix === 'kingHearts' ? draft : draft.king;
@@ -1158,17 +1138,11 @@
         scores[card.taker] += -base;
         return;
       }
-      // Doubled: downside target -2*base, upside target +base.
-      // Our UI lets the user pick dnPlayer/upPlayer explicitly.
-      // dnPlayer is usually the taker (gets -2*base), upPlayer is the doubler/forcer (gets +base).
-      // If dnPlayer and upPlayer are the same, the same player gets -2*base +base = -base (net).
-      if (card.dnPlayer === null || card.upPlayer === null) {
-        // incomplete — just apply plain taker penalty as a fallback
-        scores[card.taker] += -base;
-        return;
-      }
-      scores[card.dnPlayer] += -2 * base;
-      scores[card.upPlayer] += base;
+      // Doubled: taker always gets -2*base. Upside player (doubler, or forcer
+      // if the doubler forced themselves to take it) gets +base. If the upside
+      // picker isn't set yet, just apply the penalty so preview is accurate.
+      scores[card.taker] += -2 * base;
+      if (card.upPlayer !== null) scores[card.upPlayer] += base;
     }
 
     function isDraftComplete(d) {
@@ -1190,9 +1164,7 @@
 
     function isDoubleableComplete(card) {
       if (card.taker === null) return false;
-      if (card.doubled) {
-        if (card.dnPlayer === null || card.upPlayer === null) return false;
-      }
+      if (card.doubled && card.upPlayer === null) return false;
       return true;
     }
 
