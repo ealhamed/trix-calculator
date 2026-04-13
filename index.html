@@ -578,17 +578,14 @@
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
     import { getDatabase, ref, set, onValue, remove, onDisconnect, push, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
-    // TEMPORARY: using konkan's Firebase project until trix-calculator-al-dew is created.
-    // Room codes are namespaced (trix uses tr1- prefix for PeerJS), so trix and konkan
-    // rooms won't collide under the shared Firebase project.
     const firebaseConfig = {
-      apiKey: "AIzaSyCfE7scp0-hPVlhpSPdzQn7_0s9l1W4aBY",
-      authDomain: "konkan-calculator-al-dew.firebaseapp.com",
-      databaseURL: "https://konkan-calculator-al-dew-default-rtdb.firebaseio.com",
-      projectId: "konkan-calculator-al-dew",
-      storageBucket: "konkan-calculator-al-dew.firebasestorage.app",
-      messagingSenderId: "767640240899",
-      appId: "1:767640240899:web:18a284f3f5c9ca34a01f36"
+      apiKey: "AIzaSyA3BMzObf45iIonTGzRiwHTDlujLoQAkDA",
+      authDomain: "trix-calculator-al-dew.firebaseapp.com",
+      databaseURL: "https://trix-calculator-al-dew-default-rtdb.firebaseio.com",
+      projectId: "trix-calculator-al-dew",
+      storageBucket: "trix-calculator-al-dew.firebasestorage.app",
+      messagingSenderId: "426680055724",
+      appId: "1:426680055724:web:26f725c45ebbbe1d12ac09"
     };
     const fbApp = initializeApp(firebaseConfig);
     const fbDb = getDatabase(fbApp);
@@ -1670,7 +1667,7 @@
       if (peer) { try { peer.destroy(); } catch (e) {} peer = null; }
       if (fbUnsubState) { try { fbUnsubState(); } catch(e) {} fbUnsubState = null; }
       if (window.FB && roomCode && roomMode === 'firebase' && isHost) {
-        window.FB.remove(window.FB.ref(window.FB.db, 'trix_rooms/' + roomCode)).catch(function() {});
+        window.FB.remove(window.FB.ref(window.FB.db, 'rooms/' + roomCode)).catch(function() {});
       }
       connections = []; hostConn = null; isHost = false; roomCode = ''; fbMyId = null;
       p2pFallbackAttempted = false; roomMode = 'p2p';
@@ -1696,15 +1693,15 @@
       document.getElementById('roomModal').style.display = 'flex';
 
       var FB = window.FB;
-      // Use 'trix_rooms' namespace so konkan/trix rooms don't collide under the shared Firebase project.
-      var roomRef = FB.ref(FB.db, 'trix_rooms/' + roomCode);
+      // Trix has its own Firebase project (trix-calculator-al-dew), so rooms/ is fine.
+      var roomRef = FB.ref(FB.db, 'rooms/' + roomCode);
       FB.set(roomRef, {
         host: true, createdAt: FB.serverTimestamp(),
         state: getStatePayload(),
         presence: {}
       }).then(function() {
         FB.onDisconnect(roomRef).remove();
-        fbUnsubState = FB.onValue(FB.ref(FB.db, 'trix_rooms/' + roomCode + '/presence'), function(snap) {
+        fbUnsubState = FB.onValue(FB.ref(FB.db, 'rooms/' + roomCode + '/presence'), function(snap) {
           var presence = snap.val() || {};
           var count = Object.keys(presence).length;
           document.getElementById('connectedCount').textContent = toAr(count) + ' متصلين';
@@ -1723,7 +1720,7 @@
       document.getElementById('joinSpinner').style.display = '';
       isHost = false; roomCode = code; roomMode = 'firebase';
       var FB = window.FB;
-      var roomRef = FB.ref(FB.db, 'trix_rooms/' + code);
+      var roomRef = FB.ref(FB.db, 'rooms/' + code);
 
       FB.onValue(roomRef, function(snap) {
         var data = snap.val();
@@ -1734,7 +1731,7 @@
         }
         if (!fbMyId) {
           fbMyId = Math.random().toString(36).substring(2, 10);
-          var presRef = FB.ref(FB.db, 'trix_rooms/' + code + '/presence/' + fbMyId);
+          var presRef = FB.ref(FB.db, 'rooms/' + code + '/presence/' + fbMyId);
           FB.set(presRef, { joinedAt: FB.serverTimestamp() });
           FB.onDisconnect(presRef).remove();
           document.getElementById('joinSpinner').style.display = 'none';
@@ -1755,7 +1752,7 @@
       if (!isHost) return;
       if (roomMode === 'firebase' && window.FB && roomCode) {
         var FB = window.FB;
-        FB.set(FB.ref(FB.db, 'trix_rooms/' + roomCode + '/state'), getStatePayload()).catch(function() {});
+        FB.set(FB.ref(FB.db, 'rooms/' + roomCode + '/state'), getStatePayload()).catch(function() {});
         return;
       }
       if (connections.length === 0) return;
