@@ -925,9 +925,11 @@
     function renderDoubleableCard(q, qi, prefix) {
       var isComplexDiamondQueen = prefix === 'complex-queens' && q.suit === 'diamonds';
       var slotStyle = isComplexDiamondQueen ? ' style="border:1.5px solid var(--gold);background:rgba(201,162,39,0.06)"' : '';
-      var row1ValCell = isComplexDiamondQueen
-        ? '<div class="val-cell">' + (q.doubled ? '-٦٠' : '-٣٥') + '</div>'
-        : '<div></div>';
+      // Always show the current penalty value. Complex diamond queen adds the
+      // diamond -10 on top of the queen penalty.
+      var base = isComplexDiamondQueen ? 35 : 25;
+      var penalty = q.doubled ? (isComplexDiamondQueen ? 60 : 50) : base;
+      var row1ValCell = '<div class="val-cell">-' + toAr(penalty) + '</div>';
       // Row 1: [suit] [val | empty] [chips] [×٢ toggle]
       var h = '<div class="card-slot"' + slotStyle + '>' +
         '<div class="suit-cell"><span class="card-symbol ' + (q.red ? 'red' : 'black') + '">' + q.symbol + '</span></div>' +
@@ -954,9 +956,10 @@
 
     function renderKingSlot(d, prefix) {
       var q = prefix === 'kingHearts' ? d : d.king;
+      var kingPenalty = q.doubled ? 150 : 75;
       var h = '<div class="card-slot">' +
         '<div class="suit-cell"><span class="card-symbol red">♥K</span></div>' +
-        '<div></div>' +
+        '<div class="val-cell">-' + toAr(kingPenalty) + '</div>' +
         '<div class="chips">';
       for (var p = 0; p < 4; p++) {
         var active = q.taker === p ? ' active' : '';
