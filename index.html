@@ -424,9 +424,9 @@
     @keyframes spin { to { transform: rotate(360deg); } }
     .contract-form, .call-picker, .scoreboard { animation: fadeIn 0.2s ease; }
 
-    /* Viewer mode: hide interactive surfaces */
-    body.is-viewer #callArea,
-    body.is-viewer .bottom-actions { display: none !important; }
+    /* Viewer mode: hide interactive surfaces. Removed when host unlocks editing. */
+    body.is-viewer:not(.edit-unlocked) #callArea,
+    body.is-viewer:not(.edit-unlocked) .bottom-actions { display: none !important; }
 
     .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
   </style>
@@ -436,8 +436,9 @@
   <!-- Room Status Bar -->
   <div id="roomStatus" style="display:none;background:var(--navy);padding:6px 12px">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:6px">
-      <span id="roomStatusText" style="font-size:11px;color:var(--cream);font-weight:600"></span>
-      <div style="display:flex;gap:4px;align-items:center">
+      <span id="roomStatusText" style="font-size:11px;color:var(--cream);font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+      <div style="display:flex;gap:4px;align-items:center;flex-shrink:0">
+        <button id="editLockBtn" style="display:none;font-size:11px;padding:8px 10px;min-height:36px;background:rgba(201,162,39,0.18);border:1px solid var(--gold);color:var(--gold);border-radius:10px;font-family:'Cairo',sans-serif;font-weight:700;cursor:pointer" onclick="toggleEditLock()">🔒 مقفل</button>
         <button style="font-size:11px;padding:8px 12px;min-height:36px;background:var(--burgundy);color:var(--cream);border:none;border-radius:10px;font-family:'Cairo',sans-serif;font-weight:700;cursor:pointer" onclick="shareRoom()">مشاركة</button>
         <button style="font-size:11px;padding:8px 12px;min-height:36px;background:transparent;border:1px solid rgba(245,240,230,0.3);color:var(--cream);border-radius:10px;font-family:'Cairo',sans-serif;font-weight:700;cursor:pointer" onclick="leaveRoom()">خروج</button>
       </div>
@@ -803,6 +804,7 @@
       renderHistory();
       checkGameOver();
       updateTeamsMenuLabel();
+      if (typeof applyEditUnlockedClass === 'function') applyEditUnlockedClass();
     }
 
     function renderProgress() {
@@ -1269,23 +1271,45 @@
 
     function submitContract() {
       if (!isDraftComplete(draft)) return;
-      var scores = computeContractScores(draft);
-      var caller = state.currentCaller;
-      // Commit path
-      var contract = draft.contract;
+      // Guest (in unlocked mode): forward the draft to host and let them apply it.
+      // Host re-broadcasts state, guest picks up the changes via applyStatePayload.
+      if (roomCode && !isHost && editUnlocked) {
+        var payload = { draft: draft, caller: state.currentCaller };
+        if (roomMode === 'firebase' && window.FB && roomCode) {
+          var FB = window.FB;
+          var msgRef = FB.push(FB.ref(FB.db, 'rooms/' + roomCode + '/messages'));
+          FB.set(msgRef, { type: 'contract_submitted', payload: payload }).catch(function() {});
+        } else if (hostConn && hostConn.open) {
+          hostConn.send({ type: 'contract_submitted', payload: payload });
+        }
+        draft = null;
+        vibrate(20);
+        render();
+        return;
+      }
+      applyContractLocally(draft, state.currentCaller);
+    }
+
+    function applyContractLocally(d, caller) {
+      var scores = computeContractScores(d);
+      var contract = d.contract;
       state.playerCalls[caller].push(contract);
       if (state.playerPath[caller] === null) {
         if (contract === 'complex') state.playerPath[caller] = '2-call';
         else if (contract !== 'trix') state.playerPath[caller] = '5-call';
-        // If trix: path stays null (undecided)
       }
-      // Apply scores
       for (var i = 0; i < 4; i++) state.totals[i] += scores[i];
-      // Record
-      state.callHistory.push({ caller: caller, contract: contract, scores: scores, draft: draft });
+      state.callHistory.push({ caller: caller, contract: contract, scores: scores, draft: d });
       draft = null;
       advanceCaller();
       saveState(); vibrate(20); render(); broadcastState();
+    }
+
+    // Called by the host when a guest forwards a contract via edit_unlocked channel.
+    function applyHostSideContract(payload) {
+      if (!payload || !payload.draft) return;
+      var caller = typeof payload.caller === 'number' ? payload.caller : state.currentCaller;
+      applyContractLocally(payload.draft, caller);
     }
 
     async function undoLastCall() {
@@ -1503,7 +1527,7 @@
 
     // ── Room Manager (P2P + Firebase fallback) ──
     var PEER_PREFIX = 'tr1-';
-    var peer = null, connections = [], hostConn = null, isHost = false, roomCode = '';
+    var peer = null, connections = [], hostConn = null, isHost = false, editUnlocked = false, roomCode = '';
     var roomMode = 'p2p'; // 'p2p' | 'firebase'
     var fbUnsubState = null, fbMyId = null;
     var p2pFallbackAttempted = false;
@@ -1538,12 +1562,22 @@
       peer.on('connection', function(conn) {
         connections.push(conn);
         updateConnCount();
+        conn.on('data', function(msg) {
+          if (!editUnlocked) return;
+          if (msg.type === 'contract_submitted') {
+            applyHostSideContract(msg.payload);
+          } else if (msg.type === 'name_changed') {
+            state.players[msg.payload.idx] = msg.payload.name;
+            saveState(); render(); broadcastState();
+          }
+        });
         conn.on('close', function() {
           connections = connections.filter(function(c) { return c !== conn; });
           updateConnCount();
         });
         conn.on('open', function() {
           conn.send({ type: 'state_sync', payload: getStatePayload() });
+          conn.send({ type: 'edit_lock', payload: { unlocked: editUnlocked } });
         });
       });
       peer.on('error', function(err) {
@@ -1592,6 +1626,10 @@
         });
         hostConn.on('data', function(msg) {
           if (msg.type === 'state_sync') { applyStatePayload(msg.payload); render(); }
+          else if (msg.type === 'edit_lock') {
+            editUnlocked = msg.payload.unlocked;
+            render();
+          }
         });
         hostConn.on('close', function() { showRoomStatus('انقطع الاتصال'); hostConn = null; });
         setTimeout(function() {
@@ -1661,6 +1699,48 @@
     function showRoomStatus(text) {
       document.getElementById('roomStatus').style.display = '';
       document.getElementById('roomStatusText').textContent = text;
+      var btn = document.getElementById('editLockBtn');
+      if (btn) {
+        btn.style.display = isHost ? '' : 'none';
+        refreshEditLockBtn();
+      }
+    }
+
+    function refreshEditLockBtn() {
+      var btn = document.getElementById('editLockBtn');
+      if (!btn) return;
+      if (editUnlocked) {
+        btn.textContent = '🔓 مفتوح';
+        btn.style.background = 'rgba(46,125,50,0.22)';
+        btn.style.borderColor = '#66BB6A';
+        btn.style.color = '#C8E6C9';
+      } else {
+        btn.textContent = '🔒 مقفل';
+        btn.style.background = 'rgba(201,162,39,0.18)';
+        btn.style.borderColor = 'var(--gold)';
+        btn.style.color = 'var(--gold)';
+      }
+    }
+
+    function toggleEditLock() {
+      if (!isHost) return;
+      editUnlocked = !editUnlocked;
+      refreshEditLockBtn();
+      connections.forEach(function(c) {
+        if (c.open) c.send({ type: 'edit_lock', payload: { unlocked: editUnlocked } });
+      });
+      if (roomMode === 'firebase' && window.FB && roomCode) {
+        window.FB.set(window.FB.ref(window.FB.db, 'rooms/' + roomCode + '/editUnlocked'), editUnlocked).catch(function() {});
+      }
+      render();
+    }
+
+    function applyEditUnlockedClass() {
+      // Called from render(); guest mode uses body.is-viewer but the
+      // :not(.edit-unlocked) CSS selector flips the gate when the host
+      // unlocks editing.
+      if (editUnlocked) document.body.classList.add('edit-unlocked');
+      else document.body.classList.remove('edit-unlocked');
     }
 
     function leaveRoom() {
@@ -1670,9 +1750,10 @@
         window.FB.remove(window.FB.ref(window.FB.db, 'rooms/' + roomCode)).catch(function() {});
       }
       connections = []; hostConn = null; isHost = false; roomCode = ''; fbMyId = null;
-      p2pFallbackAttempted = false; roomMode = 'p2p';
+      p2pFallbackAttempted = false; roomMode = 'p2p'; editUnlocked = false;
       document.getElementById('roomStatus').style.display = 'none';
       document.body.classList.remove('is-viewer');
+      document.body.classList.remove('edit-unlocked');
       render();
     }
 
@@ -1698,6 +1779,7 @@
       FB.set(roomRef, {
         host: true, createdAt: FB.serverTimestamp(),
         state: getStatePayload(),
+        editUnlocked: false,
         presence: {}
       }).then(function() {
         FB.onDisconnect(roomRef).remove();
@@ -1706,6 +1788,22 @@
           var count = Object.keys(presence).length;
           document.getElementById('connectedCount').textContent = toAr(count) + ' متصلين';
           showRoomStatus('غرفة F-' + roomCode + ' • معزّب • ' + toAr(count) + ' متصلين');
+        });
+        // Drain guest messages when unlocked
+        FB.onValue(FB.ref(FB.db, 'rooms/' + roomCode + '/messages'), function(snap) {
+          var msgs = snap.val() || {};
+          Object.keys(msgs).forEach(function(k) {
+            var msg = msgs[k];
+            if (editUnlocked) {
+              if (msg.type === 'contract_submitted') {
+                applyHostSideContract(msg.payload);
+              } else if (msg.type === 'name_changed') {
+                state.players[msg.payload.idx] = msg.payload.name;
+                saveState(); render(); broadcastState();
+              }
+            }
+            FB.remove(FB.ref(FB.db, 'rooms/' + roomCode + '/messages/' + k));
+          });
         });
         showRoomStatus('غرفة F-' + roomCode + ' • معزّب • ٠ متصلين');
       }).catch(function(err) {
@@ -1739,7 +1837,9 @@
           showRoomStatus('غرفة F-' + code + ' • متصل');
           document.body.classList.add('is-viewer');
         }
-        if (data.state) { applyStatePayload(data.state); render(); }
+        if (data.state) { applyStatePayload(data.state); }
+        editUnlocked = !!data.editUnlocked;
+        render();
       }, function(err) {
         console.error(err);
         document.getElementById('joinSpinner').style.display = 'none';
