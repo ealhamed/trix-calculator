@@ -426,7 +426,10 @@
 
     /* Viewer mode: hide interactive surfaces. Removed when host unlocks editing. */
     body.is-viewer:not(.edit-unlocked) #callArea,
-    body.is-viewer:not(.edit-unlocked) .bottom-actions { display: none !important; }
+    body.is-viewer:not(.edit-unlocked) .bottom-actions,
+    body.is-viewer:not(.edit-unlocked) .menu-item.write-action { display: none !important; }
+    body.is-viewer:not(.edit-unlocked) .player-card,
+    body.is-viewer:not(.edit-unlocked) .player-name { pointer-events: none !important; cursor: default !important; }
 
     .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
   </style>
@@ -506,15 +509,15 @@
     </div>
     <div class="menu-section">
       <div class="menu-section-title">الإعدادات</div>
-      <button class="menu-item" onclick="closeMenu();confirmNewGame()">
+      <button class="menu-item write-action" onclick="closeMenu();confirmNewGame()">
         <span>جلسة جديدة</span>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
       </button>
-      <button class="menu-item" onclick="closeMenu();toggleTeamsMode()">
+      <button class="menu-item write-action" onclick="closeMenu();toggleTeamsMode()">
         <span id="teamsModeLabel">وضع الفرق</span>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       </button>
-      <button class="menu-item" id="editTeamsMenuBtn" onclick="closeMenu();openTeamAssign()" style="display:none">
+      <button class="menu-item write-action" id="editTeamsMenuBtn" onclick="closeMenu();openTeamAssign()" style="display:none">
         <span>تعديل الفرق</span>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
       </button>
@@ -578,7 +581,6 @@
 
   <div id="gameOverOverlay" style="display:none"></div>
 
-  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js" integrity="sha384-nlUQ8ZqCbvStErob+biJNzSgltf6urV3VGqhfIfzhmg9RXmpeRm76ELw0pYnKlTR" crossorigin="anonymous"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" integrity="sha384-3zSEDfvllQohrq0PHL1fOXJuC/jSOO34H46t6UQfobFOmxE5BpjjaIJY5F2/bMnU" crossorigin="anonymous"></script>
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
@@ -827,6 +829,31 @@
       checkGameOver();
       updateTeamsMenuLabel();
       if (typeof applyEditUnlockedClass === 'function') applyEditUnlockedClass();
+
+      // Lock down every write-action DOM surface when a guest is in a
+      // locked-edit room. Branches are idempotent: when blockForViewer is
+      // false we re-show / re-enable so toggling the host's edit lock off
+      // un-hides everything on the next render().
+      var blockForViewer = !!(roomCode && !isHost && !editUnlocked);
+      var callArea = document.getElementById('callArea');
+      if (callArea) callArea.style.display = blockForViewer ? 'none' : '';
+      var bottomActions = document.querySelector('.bottom-actions');
+      if (bottomActions) bottomActions.style.display = blockForViewer ? 'none' : '';
+      var writeMenuItems = document.querySelectorAll('.menu-item.write-action');
+      for (var wi = 0; wi < writeMenuItems.length; wi++) {
+        var mi = writeMenuItems[wi];
+        // editTeamsMenuBtn has its own teams-mode gate; don't un-hide it
+        // when teams-mode is off, and don't show it to viewers ever.
+        if (mi.id === 'editTeamsMenuBtn') {
+          mi.style.display = (!blockForViewer && state.teamsMode) ? '' : 'none';
+        } else {
+          mi.style.display = blockForViewer ? 'none' : '';
+        }
+      }
+      var playerCards = document.querySelectorAll('#scoreboard .player-card, #scoreboard .player-name');
+      for (var pc = 0; pc < playerCards.length; pc++) {
+        playerCards[pc].style.pointerEvents = blockForViewer ? 'none' : '';
+      }
     }
 
     function renderProgress() {
@@ -882,11 +909,13 @@
     }
 
     async function renamePlayer(i) {
+      if (isWriteBlocked()) return;
       var n = await appPrompt('اسم اللاعب:', state.players[i]);
       if (n) { state.players[i] = n; saveState(); render(); broadcastState(); }
     }
 
     function selectCaller(i) {
+      if (isWriteBlocked()) return;
       if (playerDone(i)) return;
       state.currentCaller = i;
       draft = null;
@@ -1292,17 +1321,16 @@
     }
 
     function submitContract() {
+      if (isWriteBlocked()) return;
       if (!isDraftComplete(draft)) return;
       // Guest (in unlocked mode): forward the draft to host and let them apply it.
       // Host re-broadcasts state, guest picks up the changes via applyStatePayload.
       if (roomCode && !isHost && editUnlocked) {
         var payload = { draft: draft, caller: state.currentCaller };
-        if (roomMode === 'firebase' && window.FB && roomCode) {
+        if (window.FB && roomCode) {
           var FB = window.FB;
           var msgRef = FB.push(FB.ref(FB.db, 'rooms/' + roomCode + '/messages'));
           FB.set(msgRef, { type: 'contract_submitted', payload: payload }).catch(function() {});
-        } else if (hostConn && hostConn.open) {
-          hostConn.send({ type: 'contract_submitted', payload: payload });
         }
         draft = null;
         vibrate(20);
@@ -1313,6 +1341,10 @@
     }
 
     function applyContractLocally(d, caller) {
+      // Host-side consumer path (applyHostSideContract) calls this with
+      // isHost=true, so isWriteBlocked() is false. Guests calling it
+      // directly from the console are blocked here.
+      if (isWriteBlocked()) return;
       var scores = computeContractScores(d);
       var contract = d.contract;
       state.playerCalls[caller].push(contract);
@@ -1335,6 +1367,7 @@
     }
 
     async function undoLastCall() {
+      if (isWriteBlocked()) return;
       if (state.callHistory.length === 0) return;
       if (!(await appConfirm('تراجع عن آخر مملكة؟'))) return;
       var last = state.callHistory.pop();
@@ -1405,6 +1438,7 @@
     }
 
     async function confirmNewGame() {
+      if (isWriteBlocked()) return;
       closeMenu();
       if (state.callHistory.length > 0 && !(await appConfirm('جلسة جديدة؟ سيتم مسح جميع النتائج'))) return;
       var keepTeams = state.teamsMode, keepPairs = state.teams, keepNames = state.players.slice();
@@ -1425,6 +1459,7 @@
     }
 
     async function toggleTeamsMode() {
+      if (isWriteBlocked()) return;
       if (state.teamsMode) {
         state.teamsMode = false; state.teams = [];
         updateTeamsMenuLabel(); saveState(); render(); broadcastState();
@@ -1485,6 +1520,7 @@
     }
     function resetTeamAssign() { teamAssignState = { picks: [], pairs: [] }; renderTeamAssign(); }
     function confirmTeamAssign() {
+      if (isWriteBlocked()) return;
       if (teamAssignState.pairs.length !== 2) return;
       state.teamsMode = true;
       state.teams = teamAssignState.pairs.slice();
@@ -1547,22 +1583,32 @@
       saveState();
     }
 
-    // ── Room Manager (P2P + Firebase fallback) ──
-    var PEER_PREFIX = 'tr1-';
-    var peer = null, connections = [], hostConn = null, isHost = false, editUnlocked = false, roomCode = '';
-    var roomMode = 'p2p'; // 'p2p' | 'firebase'
-    var fbUnsubState = null, fbMyId = null;
-    var p2pFallbackAttempted = false;
+    // ── Room Manager (Firebase-only) ────────────────
+    var isHost = false, editUnlocked = false, roomCode = '';
+    var fbUnsubState = null, fbUnsubMsgs = null, fbUnsubPresence = null, fbMyId = null;
+
+    // Guests in a locked-edit room may not mutate state. Every user-facing
+    // mutator early-returns on this so DOM hiding isn't the only defense.
+    // (The host-side message consumer path in createRoom's onValue is
+    // intentionally NOT guarded — that's how unlocked guests submit.)
+    function isWriteBlocked() {
+      return !!(roomCode && !isHost && !editUnlocked);
+    }
 
     function genRoomCode() { return Math.random().toString(36).substring(2, 6).toUpperCase(); }
 
-    function createRoom() {
-      roomMode = 'p2p';
-      return createRoomP2P();
+    function saveRoomSession(role, code) {
+      sessionStorage.setItem('trix_room', JSON.stringify({ role: role, code: code }));
+    }
+    function clearRoomSession() {
+      sessionStorage.removeItem('trix_room');
     }
 
-    function createRoomP2P() {
+    function createRoom() {
+      if (!window.FB) { alert('Firebase غير متوفر، تأكد من الإنترنت'); return; }
       roomCode = genRoomCode();
+      isHost = true;
+      editUnlocked = false;
       document.getElementById('roomModalTitle').textContent = 'غرفة جديدة';
       document.getElementById('roomCreateView').style.display = '';
       document.getElementById('roomJoinView').style.display = 'none';
@@ -1574,46 +1620,45 @@
       document.getElementById('connectedCount').textContent = 'جاري الاتصال...';
       pushOverlay('roomModal');
       document.getElementById('roomModal').style.display = 'flex';
-      isHost = true; connections = [];
       showRoomStatus('غرفة ' + roomCode + ' • جاري الاتصال...');
 
-      peer = new Peer(PEER_PREFIX + roomCode.toLowerCase(), { config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] } });
-      peer.on('open', function() {
+      var FB = window.FB;
+      var roomRef = FB.ref(FB.db, 'rooms/' + roomCode);
+      FB.set(roomRef, {
+        host: true,
+        createdAt: FB.serverTimestamp(),
+        state: getStatePayload(),
+        editUnlocked: false,
+        presence: {}
+      }).then(function() {
+        FB.onDisconnect(roomRef).remove();
+        saveRoomSession('host', roomCode);
         document.getElementById('connectedCount').textContent = 'جاهز • ٠ متصلين';
         showRoomStatus('غرفة ' + roomCode + ' • معزّب • ٠ متصلين');
-      });
-      peer.on('connection', function(conn) {
-        connections.push(conn);
-        updateConnCount();
-        conn.on('data', function(msg) {
-          if (!editUnlocked) return;
-          if (msg.type === 'contract_submitted') {
-            applyHostSideContract(msg.payload);
-          } else if (msg.type === 'name_changed') {
-            state.players[msg.payload.idx] = msg.payload.name;
-            saveState(); render(); broadcastState();
-          }
+        fbUnsubPresence = FB.onValue(FB.ref(FB.db, 'rooms/' + roomCode + '/presence'), function(snap) {
+          var presence = snap.val() || {};
+          var count = Object.keys(presence).length;
+          document.getElementById('connectedCount').textContent = toAr(count) + ' متصلين';
+          showRoomStatus('غرفة ' + roomCode + ' • معزّب • ' + toAr(count) + ' متصلين');
         });
-        conn.on('close', function() {
-          connections = connections.filter(function(c) { return c !== conn; });
-          updateConnCount();
+        fbUnsubMsgs = FB.onValue(FB.ref(FB.db, 'rooms/' + roomCode + '/messages'), function(snap) {
+          var msgs = snap.val() || {};
+          Object.keys(msgs).forEach(function(k) {
+            var msg = msgs[k];
+            if (editUnlocked) {
+              if (msg.type === 'contract_submitted') {
+                applyHostSideContract(msg.payload);
+              } else if (msg.type === 'name_changed') {
+                state.players[msg.payload.idx] = msg.payload.name;
+                saveState(); render(); broadcastState();
+              }
+            }
+            FB.remove(FB.ref(FB.db, 'rooms/' + roomCode + '/messages/' + k));
+          });
         });
-        conn.on('open', function() {
-          conn.send({ type: 'state_sync', payload: getStatePayload() });
-          conn.send({ type: 'edit_lock', payload: { unlocked: editUnlocked } });
-        });
-      });
-      peer.on('error', function(err) {
-        console.error('Peer error:', err);
-        if (!p2pFallbackAttempted && (String(err).indexOf('server') !== -1 || String(err.type).indexOf('server') !== -1 || err.type === 'network' || err.type === 'socket-error' || err.type === 'unavailable-id')) {
-          p2pFallbackAttempted = true;
-          document.getElementById('connectedCount').textContent = 'يتم التحويل إلى الغرفة الكبيرة...';
-          if (peer) { try { peer.destroy(); } catch (e) {} peer = null; }
-          connections = []; isHost = false;
-          setTimeout(function() { roomMode = 'firebase'; createRoomFirebase(); }, 500);
-          return;
-        }
-        document.getElementById('connectedCount').textContent = 'لم يتم الاتصال، تأكد من الإنترنت';
+      }).catch(function(err) {
+        console.error(err);
+        document.getElementById('connectedCount').textContent = 'فشل الاتصال بـ Firebase';
       });
     }
 
@@ -1630,46 +1675,42 @@
     function doJoinRoom() {
       var code = document.getElementById('joinCodeInput').value.trim().toUpperCase();
       if (!code) { document.getElementById('joinError').textContent = 'أدخل رمز الغرفة'; return; }
-      if (code.charAt(0) === 'F' && code.charAt(1) === '-') {
-        return doJoinRoomFirebase(code.substring(2));
-      }
+      // Strip legacy F- prefix if present (for old share links)
+      if (code.charAt(0) === 'F' && code.charAt(1) === '-') code = code.substring(2);
       if (code.length !== 4) { document.getElementById('joinError').textContent = 'أدخل رمز من ٤ أحرف'; return; }
+      if (!window.FB) { document.getElementById('joinError').textContent = 'Firebase غير متوفر'; return; }
       document.getElementById('joinError').textContent = '';
       document.getElementById('joinSpinner').style.display = '';
-      isHost = false; roomCode = code;
+      isHost = false;
+      roomCode = code;
 
-      peer = new Peer(undefined, { config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] } });
-      peer.on('open', function() {
-        hostConn = peer.connect(PEER_PREFIX + code.toLowerCase());
-        hostConn.on('open', function() {
+      var FB = window.FB;
+      var roomRef = FB.ref(FB.db, 'rooms/' + code);
+      fbUnsubState = FB.onValue(roomRef, function(snap) {
+        var data = snap.val();
+        if (!data) {
+          document.getElementById('joinSpinner').style.display = 'none';
+          document.getElementById('joinError').textContent = 'الغرفة غير موجودة';
+          return;
+        }
+        if (!fbMyId) {
+          fbMyId = Math.random().toString(36).substring(2, 10);
+          var presRef = FB.ref(FB.db, 'rooms/' + code + '/presence/' + fbMyId);
+          FB.set(presRef, { joinedAt: FB.serverTimestamp() });
+          FB.onDisconnect(presRef).remove();
           document.getElementById('joinSpinner').style.display = 'none';
           closeRoomModal();
           showRoomStatus('غرفة ' + code + ' • متصل');
+          saveRoomSession('joiner', code);
           document.body.classList.add('is-viewer');
-        });
-        hostConn.on('data', function(msg) {
-          if (msg.type === 'state_sync') { applyStatePayload(msg.payload); render(); }
-          else if (msg.type === 'edit_lock') {
-            editUnlocked = msg.payload.unlocked;
-            render();
-          }
-        });
-        hostConn.on('close', function() { showRoomStatus('انقطع الاتصال'); hostConn = null; });
-        setTimeout(function() {
-          if (!hostConn || !hostConn.open) {
-            document.getElementById('joinSpinner').style.display = 'none';
-            document.getElementById('joinError').textContent = 'لم يتم العثور على الغرفة، تأكد من الرمز والإنترنت';
-            if (peer) peer.destroy();
-          }
-        }, 10000);
-      });
-      peer.on('error', function(err) {
-        console.error('Peer join error:', err);
-        if (!p2pFallbackAttempted && (String(err).indexOf('server') !== -1 || err.type === 'network' || err.type === 'socket-error')) {
-          p2pFallbackAttempted = true;
-          document.getElementById('joinError').textContent = 'جاري المحاولة عبر Firebase...';
-          setTimeout(function() { roomMode = 'firebase'; doJoinRoomFirebase(code); }, 500);
         }
+        if (data.state) applyStatePayload(data.state);
+        editUnlocked = !!data.editUnlocked;
+        render();
+      }, function(err) {
+        console.error(err);
+        document.getElementById('joinSpinner').style.display = 'none';
+        document.getElementById('joinError').textContent = 'فشل الاتصال بـ Firebase';
       });
     }
 
@@ -1679,8 +1720,7 @@
     }
 
     function getJoinUrl() {
-      var prefix = (roomMode === 'firebase') ? 'F-' : '';
-      return window.location.href.split('?')[0] + '?room=' + prefix + roomCode;
+      return window.location.href.split('?')[0] + '?room=' + roomCode;
     }
 
     function copyRoomLink() {
@@ -1694,7 +1734,7 @@
     function doShareNative() {
       var joinUrl = getJoinUrl();
       if (navigator.share) {
-        navigator.share({ title: 'تركس - الديوانية', text: 'تعال انضم للغرفة! الرمز: ' + (roomMode === 'firebase' ? 'F-' : '') + roomCode, url: joinUrl }).catch(function() { copyRoomLink(); });
+        navigator.share({ title: 'تركس - الديوانية', text: 'تعال انضم للغرفة! الرمز: ' + roomCode, url: joinUrl }).catch(function() { copyRoomLink(); });
       } else { copyRoomLink(); }
     }
 
@@ -1702,21 +1742,13 @@
       document.getElementById('roomModalTitle').textContent = 'مشاركة الغرفة';
       document.getElementById('roomCreateView').style.display = '';
       document.getElementById('roomJoinView').style.display = 'none';
-      document.getElementById('roomCodeDisplay').textContent = (roomMode === 'firebase' ? 'F-' : '') + roomCode;
+      document.getElementById('roomCodeDisplay').textContent = roomCode;
       var joinUrl = getJoinUrl();
       var qrBox = document.getElementById('qrBox'); qrBox.innerHTML = '';
       var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
       new QRCode(qrBox, { text: joinUrl, width: 160, height: 160, colorDark: isDark ? '#E8E4DC' : '#1A2744', colorLight: isDark ? '#1A1A2E' : '#F5F0E6', correctLevel: QRCode.CorrectLevel.M });
-      var count = connections.filter(function(c) { return c.open; }).length;
-      document.getElementById('connectedCount').textContent = toAr(count) + ' متصلين';
       pushOverlay('roomModal');
       document.getElementById('roomModal').style.display = 'flex';
-    }
-
-    function updateConnCount() {
-      var count = connections.filter(function(c) { return c.open; }).length;
-      document.getElementById('connectedCount').textContent = toAr(count) + ' متصلين';
-      showRoomStatus('غرفة ' + roomCode + ' • معزّب • ' + toAr(count) + ' متصلين');
     }
 
     function showRoomStatus(text) {
@@ -1749,10 +1781,7 @@
       if (!isHost) return;
       editUnlocked = !editUnlocked;
       refreshEditLockBtn();
-      connections.forEach(function(c) {
-        if (c.open) c.send({ type: 'edit_lock', payload: { unlocked: editUnlocked } });
-      });
-      if (roomMode === 'firebase' && window.FB && roomCode) {
+      if (window.FB && roomCode) {
         window.FB.set(window.FB.ref(window.FB.db, 'rooms/' + roomCode + '/editUnlocked'), editUnlocked).catch(function() {});
       }
       render();
@@ -1767,139 +1796,64 @@
     }
 
     function leaveRoom() {
-      if (peer) { try { peer.destroy(); } catch (e) {} peer = null; }
       if (fbUnsubState) { try { fbUnsubState(); } catch(e) {} fbUnsubState = null; }
-      if (window.FB && roomCode && roomMode === 'firebase' && isHost) {
-        window.FB.remove(window.FB.ref(window.FB.db, 'rooms/' + roomCode)).catch(function() {});
+      if (fbUnsubMsgs) { try { fbUnsubMsgs(); } catch(e) {} fbUnsubMsgs = null; }
+      if (fbUnsubPresence) { try { fbUnsubPresence(); } catch(e) {} fbUnsubPresence = null; }
+      if (window.FB && roomCode) {
+        if (isHost) {
+          window.FB.remove(window.FB.ref(window.FB.db, 'rooms/' + roomCode)).catch(function() {});
+        } else if (fbMyId) {
+          window.FB.remove(window.FB.ref(window.FB.db, 'rooms/' + roomCode + '/presence/' + fbMyId)).catch(function() {});
+        }
       }
-      connections = []; hostConn = null; isHost = false; roomCode = ''; fbMyId = null;
-      p2pFallbackAttempted = false; roomMode = 'p2p'; editUnlocked = false;
+      isHost = false;
+      roomCode = '';
+      editUnlocked = false;
+      fbMyId = null;
+      clearRoomSession();
       document.getElementById('roomStatus').style.display = 'none';
       document.body.classList.remove('is-viewer');
       document.body.classList.remove('edit-unlocked');
       render();
     }
 
-    // ── Firebase room implementation ──
-    function createRoomFirebase() {
-      if (!window.FB) { alert('Firebase غير متوفر'); return; }
-      roomCode = genRoomCode();
-      isHost = true;
-      document.getElementById('roomModalTitle').textContent = 'غرفة جديدة';
-      document.getElementById('roomCreateView').style.display = '';
-      document.getElementById('roomJoinView').style.display = 'none';
-      document.getElementById('roomCodeDisplay').textContent = 'F-' + roomCode;
-      var joinUrl = window.location.href.split('?')[0] + '?room=F-' + roomCode;
-      var qrBox = document.getElementById('qrBox'); qrBox.innerHTML = '';
-      var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-      new QRCode(qrBox, { text: joinUrl, width: 160, height: 160, colorDark: isDark ? '#E8E4DC' : '#1A2744', colorLight: isDark ? '#1A1A2E' : '#F5F0E6', correctLevel: QRCode.CorrectLevel.M });
-      pushOverlay('roomModal');
-      document.getElementById('roomModal').style.display = 'flex';
-      showRoomStatus('غرفة F-' + roomCode + ' • جاري الاتصال...');
-
-      var FB = window.FB;
-      // Trix has its own Firebase project (trix-calculator-al-dew), so rooms/ is fine.
-      var roomRef = FB.ref(FB.db, 'rooms/' + roomCode);
-      FB.set(roomRef, {
-        host: true, createdAt: FB.serverTimestamp(),
-        state: getStatePayload(),
-        editUnlocked: false,
-        presence: {}
-      }).then(function() {
-        FB.onDisconnect(roomRef).remove();
-        fbUnsubState = FB.onValue(FB.ref(FB.db, 'rooms/' + roomCode + '/presence'), function(snap) {
-          var presence = snap.val() || {};
-          var count = Object.keys(presence).length;
-          document.getElementById('connectedCount').textContent = toAr(count) + ' متصلين';
-          showRoomStatus('غرفة F-' + roomCode + ' • معزّب • ' + toAr(count) + ' متصلين');
-        });
-        // Drain guest messages when unlocked
-        FB.onValue(FB.ref(FB.db, 'rooms/' + roomCode + '/messages'), function(snap) {
-          var msgs = snap.val() || {};
-          Object.keys(msgs).forEach(function(k) {
-            var msg = msgs[k];
-            if (editUnlocked) {
-              if (msg.type === 'contract_submitted') {
-                applyHostSideContract(msg.payload);
-              } else if (msg.type === 'name_changed') {
-                state.players[msg.payload.idx] = msg.payload.name;
-                saveState(); render(); broadcastState();
-              }
-            }
-            FB.remove(FB.ref(FB.db, 'rooms/' + roomCode + '/messages/' + k));
-          });
-        });
-        showRoomStatus('غرفة F-' + roomCode + ' • معزّب • ٠ متصلين');
-      }).catch(function(err) {
-        console.error(err);
-        document.getElementById('connectedCount').textContent = 'فشل الاتصال بـ Firebase';
-      });
-    }
-
-    function doJoinRoomFirebase(code) {
-      if (!window.FB) { document.getElementById('joinError').textContent = 'Firebase غير متوفر'; return; }
-      document.getElementById('joinError').textContent = '';
-      document.getElementById('joinSpinner').style.display = '';
-      isHost = false; roomCode = code; roomMode = 'firebase';
-      var FB = window.FB;
-      var roomRef = FB.ref(FB.db, 'rooms/' + code);
-
-      FB.onValue(roomRef, function(snap) {
-        var data = snap.val();
-        if (!data) {
-          document.getElementById('joinSpinner').style.display = 'none';
-          document.getElementById('joinError').textContent = 'الغرفة غير موجودة';
-          return;
-        }
-        if (!fbMyId) {
-          fbMyId = Math.random().toString(36).substring(2, 10);
-          var presRef = FB.ref(FB.db, 'rooms/' + code + '/presence/' + fbMyId);
-          FB.set(presRef, { joinedAt: FB.serverTimestamp() });
-          FB.onDisconnect(presRef).remove();
-          document.getElementById('joinSpinner').style.display = 'none';
-          closeRoomModal();
-          showRoomStatus('غرفة F-' + code + ' • متصل');
-          document.body.classList.add('is-viewer');
-        }
-        if (data.state) { applyStatePayload(data.state); }
-        editUnlocked = !!data.editUnlocked;
-        render();
-      }, function(err) {
-        console.error(err);
-        document.getElementById('joinSpinner').style.display = 'none';
-        document.getElementById('joinError').textContent = 'فشل الاتصال بـ Firebase';
-      });
-      fbUnsubState = function() { /* noop */ };
-    }
-
     function broadcastState() {
-      if (!isHost) return;
-      if (roomMode === 'firebase' && window.FB && roomCode) {
-        var FB = window.FB;
-        FB.set(FB.ref(FB.db, 'rooms/' + roomCode + '/state'), getStatePayload()).catch(function() {});
-        return;
-      }
-      if (connections.length === 0) return;
-      var payload = { type: 'state_sync', payload: getStatePayload() };
-      connections.forEach(function(c) { if (c.open) c.send(payload); });
+      if (!window.FB || !roomCode || !isHost) return;
+      var FB = window.FB;
+      FB.set(FB.ref(FB.db, 'rooms/' + roomCode + '/state'), getStatePayload()).catch(function() {});
     }
 
-    // Auto-join from URL
+    // Auto-join room from URL parameter or reconnect from sessionStorage
     (function() {
       var params = new URLSearchParams(window.location.search);
       var roomParam = params.get('room');
       if (roomParam) {
-        var isFB = roomParam.charAt(0) === 'F' && roomParam.charAt(1) === '-';
-        var validLen = isFB ? (roomParam.length === 6) : (roomParam.length === 4);
-        if (validLen) {
+        var code = roomParam.toUpperCase();
+        if (code.charAt(0) === 'F' && code.charAt(1) === '-') code = code.substring(2);
+        if (code.length === 4) {
           window.history.replaceState({}, '', window.location.pathname);
           setTimeout(function() {
             joinRoom();
-            document.getElementById('joinCodeInput').value = roomParam.toUpperCase();
+            document.getElementById('joinCodeInput').value = code;
             doJoinRoom();
           }, 500);
+          return;
         }
       }
+      // Reconnect to previous room after refresh (joiner only — host can't reclaim an old code)
+      try {
+        var saved = JSON.parse(sessionStorage.getItem('trix_room'));
+        if (saved && saved.code && saved.code.length === 4 && saved.role === 'joiner') {
+          setTimeout(function() {
+            joinRoom();
+            document.getElementById('joinCodeInput').value = saved.code;
+            doJoinRoom();
+          }, 500);
+        } else if (saved) {
+          // Clear stale host sessions — they can't be restored safely
+          clearRoomSession();
+        }
+      } catch(e) {}
     })();
 
     // ── Service worker ──
