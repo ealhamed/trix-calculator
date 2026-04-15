@@ -4,10 +4,9 @@ Score tracker for the Levantine/Gulf Trix card game — sibling to baloot/sibeet
 
 ## Stack
 - Single-file PWA (`index.html`)
-- PeerJS v1.5.4 for P2P multiplayer (star topology, host ↔ viewers)
-- Firebase Realtime Database as scaling fallback when PeerJS broker is unavailable
+- Firebase Realtime Database for shared rooms (host broadcasts state, viewers mirror)
 - QRCode.js for room QR codes
-- Service Worker (`sw.js`, cache `trix-v15`) for offline caching
+- Service Worker (`sw.js`, cache `trix-v22`) for offline caching
 - Al Dewaniah visual identity (burgundy #722F37 / gold #C9A227 / navy #1A2744 / cream #F5F0E6, Cairo font)
 
 ## Commands
@@ -92,19 +91,15 @@ Each player chooses one of two paths on their first call:
 - Menu links to all 4 sibling calculators
 
 ## Multiplayer (Rooms)
-- **PeerJS mode** (default): host generates 4-digit code, viewers scan QR or enter code; star-topology, ~8 viewer soft cap
-- **Firebase mode** (auto-fallback): on PeerJS broker error, app silently switches to Firebase RTDB with `F-XXXX` code prefix, removing viewer cap
-- **Viewers are strictly read-only** — host's device is the single source of truth. The `body.is-viewer` class hides the call picker and bottom actions (`تراجع` / `جلسة جديدة`) on viewer devices.
+- **Firebase-only**: host generates a 4-char code, viewers scan QR or enter the code. No viewer cap beyond Firebase quota.
+- State model: `rooms/{code}` holds `state`, `editUnlocked`, `presence/{id}`, and `messages/{id}` (viewer→host contract pushes when edit unlocked)
+- Host writes full state on every `broadcastState()`; viewers mirror via `onValue`. `onDisconnect` removes the room on host exit and the presence entry on viewer exit.
+- **Viewers are strictly read-only** — host's device is the single source of truth. The `body.is-viewer` class hides the call picker and bottom actions (`تراجع` / `جلسة جديدة`) on viewer devices. Host can toggle edit-unlock to let viewers push contracts.
 - State sync via `getStatePayload()` covering all trix-specific fields: `callHistory`, `playerCalls`, `playerPath`, `currentCaller`, `teamsMode`, `teams`, `totals`, `players`
-- `broadcastState()` wired into every host-side mutation
 - Firebase gotcha: trailing empty arrays get dropped on serialization, so `applyStatePayload` pads `playerCalls` and `playerPath` back to player count
-- **Auto-join** from `?room=XXXX` URL parameter
-- PeerJS ID prefix: `tr1-` (trix v1)
-- Firebase namespace: `trix_rooms/` (so trix and konkan rooms never collide)
-
-### Firebase Project
-- **Currently**: sharing `konkan-calculator-al-dew` temporarily (rooms namespaced to prevent collision)
-- **Planned**: move to dedicated `trix-calculator-al-dew` once created in the Firebase console (for isolated 100-concurrent quota)
+- **Auto-join** from `?room=XXXX` URL parameter; joiners also auto-reconnect from sessionStorage after refresh (host sessions are cleared since codes can't be reclaimed)
+- Legacy `F-XXXX` share links are still honored — the `F-` prefix is stripped on join
+- Firebase project: `trix-calculator-al-dew` (isolated 100-concurrent quota)
 
 ## Repos
 - **trix-calculator**: https://github.com/ealhamed/trix-calculator
