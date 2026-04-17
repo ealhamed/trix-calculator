@@ -342,6 +342,30 @@
     .history-score.zero { background: rgba(26,39,68,0.08); color: var(--navy); opacity: 0.5; }
     [data-theme="dark"] .history-score.zero { color: var(--cream); }
 
+    .kingdom-block {
+      margin-bottom: 10px; border: 1.5px solid rgba(201,162,39,0.3);
+      border-radius: 12px; overflow: hidden;
+    }
+    [data-theme="dark"] .kingdom-block { border-color: rgba(212,175,55,0.4); }
+    .kingdom-header {
+      display: grid; grid-template-columns: 24px 1fr auto; gap: 6px;
+      padding: 8px 10px; background: rgba(201,162,39,0.12);
+      align-items: center; font-size: 12px;
+    }
+    [data-theme="dark"] .kingdom-header { background: rgba(212,175,55,0.12); }
+    .kingdom-idx { font-weight: 900; color: var(--gold-text); font-size: 13px; }
+    [data-theme="dark"] .kingdom-idx { color: var(--gold); }
+    .kingdom-caller { font-weight: 800; color: var(--navy); }
+    [data-theme="dark"] .kingdom-caller { color: var(--cream); }
+    .kingdom-totals .history-score { font-weight: 900; }
+    .kingdom-game {
+      display: grid; grid-template-columns: 24px 1fr auto; gap: 6px;
+      padding: 6px 10px; align-items: center; font-size: 11px;
+      border-top: 1px solid rgba(26,39,68,0.06);
+    }
+    [data-theme="dark"] .kingdom-game { border-top-color: rgba(245,240,230,0.06); }
+    .kingdom-game-name { grid-column: 2; font-weight: 700; opacity: 0.85; }
+
     /* Game over */
     .game-over-overlay {
       position: fixed; inset: 0; background: rgba(26,39,68,0.85);
@@ -536,7 +560,7 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
       </button>
     </div>
-    <div class="menu-version">v28</div>
+    <div class="menu-version">v29</div>
     <div class="menu-footer">With warm regards from ESH</div>
   </aside>
 
@@ -842,6 +866,10 @@
     }
 
     function advanceCaller() {
+      // Stay on the current caller until they've completed their kingdom (path).
+      // playerDone returns false when the path is undecided (e.g. trix called first
+      // but no second commit yet), which keeps the caller in place — correct.
+      if (!playerDone(state.currentCaller)) return;
       for (var step = 1; step <= 4; step++) {
         var next = (state.currentCaller + step) % 4;
         if (!playerDone(next)) { state.currentCaller = next; return; }
@@ -1429,20 +1457,49 @@
     function renderHistory() {
       var wrap = document.getElementById('historyWrap');
       if (state.callHistory.length === 0) { wrap.innerHTML = ''; return; }
+
+      // Group consecutive entries by caller — each run is one kingdom.
+      var kingdoms = [];
+      state.callHistory.forEach(function(row) {
+        var last = kingdoms[kingdoms.length - 1];
+        if (last && last.caller === row.caller) last.games.push(row);
+        else kingdoms.push({ caller: row.caller, games: [row] });
+      });
+
       var html = '<div class="history-title">سجل الممالك</div>';
-      state.callHistory.forEach(function(row, idx) {
-        html += '<div class="history-row">' +
-          '<div class="history-idx">' + toAr(idx + 1) + '</div>' +
-          '<div><div class="history-contract">' + CONTRACTS[row.contract].name + '</div>' +
-          '<div class="history-caller">' + escHtml(state.players[row.caller]) + '</div></div>' +
-          '<div class="history-scores">';
+      kingdoms.forEach(function(k, ki) {
+        // Per-player totals contributed by this kingdom
+        var totals = [0, 0, 0, 0];
+        k.games.forEach(function(g) {
+          for (var i = 0; i < 4; i++) totals[i] += g.scores[i];
+        });
+
+        html += '<div class="kingdom-block">';
+        html += '<div class="kingdom-header">' +
+          '<div class="kingdom-idx">' + toAr(ki + 1) + '</div>' +
+          '<div class="kingdom-caller">مملكة ' + escHtml(state.players[k.caller]) + '</div>' +
+          '<div class="history-scores kingdom-totals">';
         for (var i = 0; i < 4; i++) {
-          var s = row.scores[i];
-          var cls = s > 0 ? 'pos' : (s < 0 ? 'neg' : 'zero');
-          var prefix = s > 0 ? '+' : '';
-          html += '<span class="history-score ' + cls + '" title="' + escHtml(state.players[i]) + '">' + prefix + toAr(s) + '</span>';
+          var t = totals[i];
+          var cls = t > 0 ? 'pos' : (t < 0 ? 'neg' : 'zero');
+          var prefix = t > 0 ? '+' : '';
+          html += '<span class="history-score ' + cls + '" title="' + escHtml(state.players[i]) + '">' + prefix + toAr(t) + '</span>';
         }
         html += '</div></div>';
+
+        k.games.forEach(function(row) {
+          html += '<div class="kingdom-game">' +
+            '<div class="kingdom-game-name">' + CONTRACTS[row.contract].name + '</div>' +
+            '<div class="history-scores">';
+          for (var i = 0; i < 4; i++) {
+            var s = row.scores[i];
+            var cls = s > 0 ? 'pos' : (s < 0 ? 'neg' : 'zero');
+            var prefix = s > 0 ? '+' : '';
+            html += '<span class="history-score ' + cls + '" title="' + escHtml(state.players[i]) + '">' + prefix + toAr(s) + '</span>';
+          }
+          html += '</div></div>';
+        });
+        html += '</div>';
       });
       wrap.innerHTML = html;
     }
