@@ -551,6 +551,10 @@
         <span>تعديل الفرق</span>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
       </button>
+      <button class="menu-item write-action" onclick="closeMenu();toggleNoDoublerReward()">
+        <span id="noDoublerRewardLabel">إيقاف مكافأة المضاعف</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15 8 22 9 17 14 18 21 12 18 6 21 7 14 2 9 9 8 12 2"/></svg>
+      </button>
       <button class="menu-item" onclick="toggleTheme()">
         <span id="themeName">حسب النظام</span>
         <span id="themeIcon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></span>
@@ -560,7 +564,7 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
       </button>
     </div>
-    <div class="menu-version">v29</div>
+    <div class="menu-version">v30</div>
     <div class="menu-footer">With warm regards from ESH</div>
   </aside>
 
@@ -661,7 +665,8 @@
         playerPath: [null, null, null, null],
         currentCaller: 0,
         teamsMode: false,
-        teams: []
+        teams: [],
+        noDoublerReward: false
       };
     }
 
@@ -678,7 +683,8 @@
           playerPath: s.playerPath || [null, null, null, null],
           currentCaller: typeof s.currentCaller === 'number' ? s.currentCaller : 0,
           teamsMode: !!s.teamsMode,
-          teams: Array.isArray(s.teams) ? s.teams : []
+          teams: Array.isArray(s.teams) ? s.teams : [],
+          noDoublerReward: !!s.noDoublerReward
         };
       } catch(e) { return defaultState(); }
     }
@@ -1360,7 +1366,7 @@
       // if the doubler forced themselves to take it) gets +base. If the upside
       // picker isn't set yet, just apply the penalty so preview is accurate.
       scores[card.taker] += -2 * base;
-      if (card.upPlayer !== null) scores[card.upPlayer] += base;
+      if (card.upPlayer !== null && !state.noDoublerReward) scores[card.upPlayer] += base;
     }
 
     function isDraftComplete(d) {
@@ -1536,11 +1542,12 @@
       if (isWriteBlocked()) return;
       closeMenu();
       if (state.callHistory.length > 0 && !(await appConfirm('جلسة جديدة؟ سيتم مسح جميع النتائج'))) return;
-      var keepTeams = state.teamsMode, keepPairs = state.teams, keepNames = state.players.slice();
+      var keepTeams = state.teamsMode, keepPairs = state.teams, keepNames = state.players.slice(), keepNoReward = state.noDoublerReward;
       state = defaultState();
       state.players = keepNames;
       state.teamsMode = keepTeams;
       state.teams = keepPairs;
+      state.noDoublerReward = keepNoReward;
       draft = null;
       saveState(); render(); broadcastState();
     }
@@ -1551,6 +1558,17 @@
       var editBtn = document.getElementById('editTeamsMenuBtn');
       if (label) label.textContent = state.teamsMode ? 'إيقاف وضع الفرق' : 'وضع الفرق';
       if (editBtn) editBtn.style.display = state.teamsMode ? '' : 'none';
+      var ndrLabel = document.getElementById('noDoublerRewardLabel');
+      if (ndrLabel) ndrLabel.textContent = state.noDoublerReward ? 'تفعيل مكافأة المضاعف' : 'إيقاف مكافأة المضاعف';
+    }
+
+    function toggleNoDoublerReward() {
+      if (isWriteBlocked()) return;
+      state.noDoublerReward = !state.noDoublerReward;
+      updateTeamsMenuLabel();
+      saveState();
+      render();
+      broadcastState();
     }
 
     async function toggleTeamsMode() {
@@ -1650,7 +1668,8 @@
         playerPath: state.playerPath,
         currentCaller: state.currentCaller,
         teamsMode: state.teamsMode,
-        teams: state.teams
+        teams: state.teams,
+        noDoublerReward: state.noDoublerReward
       };
     }
 
@@ -1674,6 +1693,7 @@
       state.currentCaller = typeof payload.currentCaller === 'number' ? payload.currentCaller : 0;
       state.teamsMode = !!payload.teamsMode;
       state.teams = Array.isArray(payload.teams) ? payload.teams : [];
+      state.noDoublerReward = !!payload.noDoublerReward;
       draft = null;
       saveState();
     }
