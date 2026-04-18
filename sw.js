@@ -1,4 +1,4 @@
-const CACHE = 'trix-v3.1';
+const CACHE = 'trix-v3.2';
 const ASSETS = [
   './',
   './index.html',
