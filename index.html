@@ -1667,7 +1667,7 @@
       function resetDim() {
         if (timer) clearTimeout(timer);
         dim.style.display = 'none';
-        timer = setTimeout(function() { dim.style.display = 'block'; }, 15000);
+        timer = setTimeout(function() { dim.style.display = 'block'; }, 30000);
       }
       ['click', 'touchstart', 'keydown', 'mousemove'].forEach(function(ev) {
         document.addEventListener(ev, resetDim, { passive: true });
